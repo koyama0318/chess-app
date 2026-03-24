@@ -18,6 +18,7 @@ interface State {
 
 type Action =
   | { type: "START_INIT" }
+  | { type: "RESET" }
   | { type: "READY" }
   | { type: "ERROR"; message: string }
   | { type: "STATE_UPDATE"; payload: RenderState };
@@ -27,6 +28,8 @@ function reducer(state: State, action: Action): State {
     case "START_INIT":
       if (state.initState !== "uninit") return state;
       return { ...state, initState: "initializing" };
+    case "RESET":
+      return { ...initialState, initState: "initializing" };
     case "READY":
       if (state.initState !== "initializing") return state;
       return { ...state, initState: "ready" };
@@ -121,6 +124,7 @@ export function useChessWorker(): UseChessWorkerReturn {
 
   const resetGame = useCallback(() => {
     clearMoveEvents();
+    dispatch({ type: "RESET" });
     workerRef.current?.postMessage({ type: "INIT" });
   }, []);
 

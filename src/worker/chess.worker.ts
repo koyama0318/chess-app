@@ -23,6 +23,13 @@ function buildRenderState(): RenderState {
   };
 }
 
+async function initWasm(): Promise<void> {
+  const mod = await import("../../wasm-pkg/chess_wasm");
+  await mod.default();
+  wasm = mod;
+  game = new mod.ChessGame();
+}
+
 export async function handleMessage(
   event: MessageEvent<WorkerRequest>
 ): Promise<void> {
@@ -31,10 +38,7 @@ export async function handleMessage(
   switch (data.type) {
     case "INIT": {
       try {
-        const mod = await import("../../wasm-pkg/chess_wasm");
-        await mod.default();
-        wasm = mod;
-        game = new mod.ChessGame();
+        await initWasm();
         postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
       } catch (e) {
         postResponse({
@@ -46,12 +50,9 @@ export async function handleMessage(
     }
     case "INIT_FROM_EVENTS": {
       try {
-        const mod = await import("../../wasm-pkg/chess_wasm");
-        await mod.default();
-        wasm = mod;
-        game = new mod.ChessGame();
+        await initWasm();
         for (const move of data.payload.uciMoves) {
-          game.apply_move(move);
+          game!.apply_move(move);
         }
         postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
       } catch (e) {
