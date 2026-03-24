@@ -1,15 +1,17 @@
 export enum GameStatus {
   InProgress = 0,
-  Check = 1,
-  Checkmate = 2,
-  Stalemate = 3,
-  Draw = 4,
+  Checkmate = 1,
+  Stalemate = 2,
+  Draw = 3,
 }
 
 export interface RenderState {
   fen: string;
+  board: Record<string, string>;
   legalMoves: string[];
   status: GameStatus;
+  isCheck: boolean;
   canUndo: boolean;
   canRedo: boolean;
+  currentTurn: "white" | "black";
 }
