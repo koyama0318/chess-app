@@ -10,9 +10,13 @@ const AFTER_E2E4_FEN =
 // --- Mock WASM module ---
 
 class MockChessGame {
-  private fen = STARTING_FEN;
+  private fen: string;
   private undoStack: string[] = [];
   private redoStack: string[] = [];
+
+  constructor(initialFen = STARTING_FEN) {
+    this.fen = initialFen;
+  }
 
   current_fen() {
     return this.fen;
@@ -65,12 +69,19 @@ const mockInitFn = vi.fn().mockResolvedValue(undefined);
 const mockGetLegalMoves = vi.fn().mockReturnValue(Array(20).fill("e2e4"));
 let mockGameInstance: MockChessGame;
 
+const mockNewFromFen = vi.fn((fen: string) => new MockChessGame(fen));
+
 vi.mock("../../../wasm-pkg/chess_wasm", () => ({
   default: mockInitFn,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ChessGame: function MockChessGameConstructor(this: any) {
-    return mockGameInstance;
-  },
+  ChessGame: Object.assign(
+    function MockChessGameConstructor(this: any) {
+      return mockGameInstance;
+    },
+    {
+      new_from_fen: (fen: string) => mockNewFromFen(fen),
+    }
+  ),
   get_legal_moves: mockGetLegalMoves,
 }));
 
@@ -88,6 +99,7 @@ beforeEach(async () => {
   mockPostMessage.mockClear();
   mockInitFn.mockClear().mockResolvedValue(undefined);
   mockGetLegalMoves.mockReturnValue(Array(20).fill("e2e4"));
+  mockNewFromFen.mockClear();
   mockGameInstance = new MockChessGame();
   const mod = await import("../chess.worker");
   handleMessage = mod.handleMessage;
@@ -197,7 +209,7 @@ describe("chess.worker message routing", () => {
       new MessageEvent("message", {
         data: {
           type: "INIT_FROM_EVENTS",
-          payload: { uciMoves: ["e2e4"] },
+          payload: { fenSnapshot: null, uciMoves: ["e2e4"] },
         },
       })
     );
@@ -217,12 +229,39 @@ describe("chess.worker message routing", () => {
       new MessageEvent("message", {
         data: {
           type: "INIT_FROM_EVENTS",
-          payload: { uciMoves: ["e2e9"] },
+          payload: { fenSnapshot: null, uciMoves: ["e2e9"] },
         },
       })
     );
     expect(mockPostMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: "ERROR" })
     );
+  });
+
+  it("uses new_from_fen when INIT_FROM_EVENTS has fenSnapshot", async () => {
+    await handleMessage(
+      new MessageEvent("message", {
+        data: {
+          type: "INIT_FROM_EVENTS",
+          payload: { fenSnapshot: AFTER_E2E4_FEN, uciMoves: [] },
+        },
+      })
+    );
+    expect(mockNewFromFen).toHaveBeenCalledWith(AFTER_E2E4_FEN);
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "STATE_UPDATE" })
+    );
+  });
+
+  it("does not call new_from_fen when fenSnapshot is null", async () => {
+    await handleMessage(
+      new MessageEvent("message", {
+        data: {
+          type: "INIT_FROM_EVENTS",
+          payload: { fenSnapshot: null, uciMoves: [] },
+        },
+      })
+    );
+    expect(mockNewFromFen).not.toHaveBeenCalled();
   });
 });

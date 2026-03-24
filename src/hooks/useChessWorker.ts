@@ -4,8 +4,10 @@ import type { WorkerResponse } from "../worker/types";
 import ChessWorker from "../worker/chess.worker?worker";
 import {
   saveMoveEvent,
-  loadMoveEvents,
+  saveSnapshot,
+  loadGameState,
   clearMoveEvents,
+  SNAPSHOT_INTERVAL,
 } from "../utils/storage";
 
 export type InitState = "uninit" | "initializing" | "ready" | "error";
@@ -64,6 +66,8 @@ export interface UseChessWorkerReturn {
 export function useChessWorker(): UseChessWorkerReturn {
   const [state, dispatch] = useReducer(reducer, initialState);
   const workerRef = useRef<InstanceType<typeof ChessWorker> | null>(null);
+  const moveCountRef = useRef(0);
+  const pendingSnapshotRef = useRef(false);
 
   useEffect(() => {
     const worker = new ChessWorker();
@@ -74,6 +78,10 @@ export function useChessWorker(): UseChessWorkerReturn {
       switch (msg.type) {
         case "STATE_UPDATE":
           dispatch({ type: "STATE_UPDATE", payload: msg.payload });
+          if (pendingSnapshotRef.current) {
+            saveSnapshot(msg.payload.fen);
+            pendingSnapshotRef.current = false;
+          }
           break;
         case "ERROR":
           dispatch({ type: "ERROR", message: msg.payload.message });
@@ -83,11 +91,12 @@ export function useChessWorker(): UseChessWorkerReturn {
 
     dispatch({ type: "START_INIT" });
 
-    const savedMoves = loadMoveEvents();
-    if (savedMoves.length > 0) {
+    const { fenSnapshot, uciMoves } = loadGameState();
+    if (fenSnapshot !== null || uciMoves.length > 0) {
+      moveCountRef.current = uciMoves.length;
       worker.postMessage({
         type: "INIT_FROM_EVENTS",
-        payload: { uciMoves: savedMoves },
+        payload: { fenSnapshot, uciMoves },
       });
     } else {
       worker.postMessage({ type: "INIT" });
@@ -101,6 +110,10 @@ export function useChessWorker(): UseChessWorkerReturn {
 
   const sendMove = useCallback((uciMove: string) => {
     saveMoveEvent(uciMove);
+    moveCountRef.current += 1;
+    if (moveCountRef.current % SNAPSHOT_INTERVAL === 0) {
+      pendingSnapshotRef.current = true;
+    }
     workerRef.current?.postMessage({
       type: "APPLY_MOVE",
       payload: { uciMove },
@@ -117,6 +130,8 @@ export function useChessWorker(): UseChessWorkerReturn {
 
   const resetGame = useCallback(() => {
     clearMoveEvents();
+    moveCountRef.current = 0;
+    pendingSnapshotRef.current = false;
     dispatch({ type: "RESET" });
     workerRef.current?.postMessage({ type: "INIT" });
   }, []);

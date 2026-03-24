@@ -15,10 +15,14 @@ function getRenderState(): RenderState {
   return game.render_state() as unknown as RenderState;
 }
 
-async function initWasm(): Promise<void> {
+async function initWasm(fenSnapshot?: string | null): Promise<void> {
   const mod = await import("../../wasm-pkg/chess_wasm");
   await mod.default();
-  game = new mod.ChessGame();
+  if (fenSnapshot) {
+    game = mod.ChessGame.new_from_fen(fenSnapshot) as ChessGameInstance;
+  } else {
+    game = new mod.ChessGame();
+  }
 }
 
 export async function handleMessage(
@@ -41,7 +45,7 @@ export async function handleMessage(
     }
     case "INIT_FROM_EVENTS": {
       try {
-        await initWasm();
+        await initWasm(data.payload.fenSnapshot);
         for (const move of data.payload.uciMoves) {
           game!.apply_move(move);
         }

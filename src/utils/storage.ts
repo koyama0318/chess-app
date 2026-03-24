@@ -1,4 +1,18 @@
 const STORAGE_KEY = "chess_move_events";
+const SNAPSHOT_KEY = "chess_fen_snapshot";
+export const SNAPSHOT_INTERVAL = 20;
+
+export function saveSnapshot(fen: string): void {
+  localStorage.setItem(SNAPSHOT_KEY, fen);
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+export function loadGameState(): { fenSnapshot: string | null; uciMoves: string[] } {
+  return {
+    fenSnapshot: localStorage.getItem(SNAPSHOT_KEY),
+    uciMoves: loadMoveEvents(),
+  };
+}
 
 export function saveMoveEvent(uciMove: string): void {
   try {
@@ -26,4 +40,5 @@ export function loadMoveEvents(): string[] {
 
 export function clearMoveEvents(): void {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(SNAPSHOT_KEY);
 }
