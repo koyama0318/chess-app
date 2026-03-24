@@ -118,7 +118,7 @@ export function useChessWorker(): UseChessWorkerReturn {
   const resetGame = useCallback(() => {
     clearMoveEvents();
     dispatch({ type: "RESET" });
-    workerRef.current?.postMessage({ type: "INIT" });
+    workerRef.current?.postMessage({ type: "RESET" });
   }, []);
 
   return {

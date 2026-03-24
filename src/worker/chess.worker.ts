@@ -97,8 +97,6 @@ export async function handleMessage(
       try {
         if (!game) throw new Error("Game not initialized");
         game.reset();
-        localStorage.removeItem("chess_events");
-        localStorage.removeItem("chess_snapshot");
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({

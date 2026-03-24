@@ -46,17 +46,11 @@ vi.mock("../../../wasm-pkg/chess_wasm", () => ({
 const mockPostMessage = vi.fn();
 vi.stubGlobal("postMessage", mockPostMessage);
 
-const mockLocalStorage = {
-  removeItem: vi.fn(),
-};
-vi.stubGlobal("localStorage", mockLocalStorage);
-
 let handleMessage: (event: MessageEvent<WorkerRequest>) => Promise<void>;
 
 beforeEach(async () => {
   vi.resetModules();
   mockPostMessage.mockClear();
-  mockLocalStorage.removeItem.mockClear();
   mockInitFn.mockClear().mockResolvedValue(undefined);
   mockGameInstance = new MockChessGame();
   const mod = await import("../chess.worker");
@@ -79,14 +73,6 @@ describe("RESET message", () => {
         payload: expect.objectContaining({ fen: STARTING_FEN }),
       })
     );
-  });
-
-  it("clears localStorage on RESET", async () => {
-    await handleMessage(new MessageEvent("message", { data: { type: "INIT" } }));
-    await handleMessage(new MessageEvent("message", { data: { type: "RESET" } }));
-
-    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("chess_events");
-    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("chess_snapshot");
   });
 
   it("returns ERROR if RESET called before INIT", async () => {

@@ -237,7 +237,7 @@ describe("useChessWorker", () => {
       });
 
       expect(clearSpy).toHaveBeenCalled();
-      expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "INIT" });
+      expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "RESET" });
     });
   });
 });
