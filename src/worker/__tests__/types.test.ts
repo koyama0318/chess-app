@@ -31,20 +31,18 @@ describe("WorkerRequest discriminated union", () => {
 });
 
 describe("WorkerResponse discriminated union", () => {
-  it("allows READY response", () => {
-    const resp: WorkerResponse = { type: "READY" };
-    expect(resp.type).toBe("READY");
-  });
-
   it("allows STATE_UPDATE response with RenderState payload", () => {
     const resp: WorkerResponse = {
       type: "STATE_UPDATE",
       payload: {
         fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        board: {},
         legalMoves: ["e7e5"],
         status: GameStatus.InProgress,
+        isCheck: false,
         canUndo: true,
         canRedo: false,
+        currentTurn: "black" as const,
       },
     };
     expect(resp.type).toBe("STATE_UPDATE");

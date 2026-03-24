@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react(), wasm()],
   worker: {
     format: "es",
+    plugins: () => [wasm()],
   },
   build: {
     target: "esnext",
