@@ -1,6 +1,13 @@
+use serde::Serialize;
 use shakmaty::fen::Fen;
-use shakmaty::{CastlingMode, Chess, EnPassantMode, Position};
+use shakmaty::{CastlingMode, Chess, Color, EnPassantMode, Position, Role};
+use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen(start)]
+pub fn init() {
+    console_error_panic_hook::set_once();
+}
 
 #[wasm_bindgen]
 pub fn greet() -> String {
@@ -34,15 +41,6 @@ pub fn fen_from_starting_position() -> String {
     Fen::default().to_string()
 }
 
-#[wasm_bindgen]
-pub fn fen_is_valid(fen: &str) -> bool {
-    let parsed: Result<Fen, _> = fen.parse();
-    match parsed {
-        Ok(f) => f.into_position::<Chess>(CastlingMode::Standard).is_ok(),
-        Err(_) => false,
-    }
-}
-
 pub(crate) fn fen_roundtrip_inner(fen: &str) -> Result<String, String> {
     let parsed: Fen = fen
         .parse()
@@ -66,10 +64,42 @@ pub fn fen_roundtrip(fen: &str) -> Result<String, JsValue> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameStatus {
     InProgress = 0,
-    Check = 1,
-    Checkmate = 2,
-    Stalemate = 3,
-    Draw = 4,
+    Checkmate = 1,
+    Stalemate = 2,
+    Draw = 3,
+}
+
+fn piece_char(color: Color, role: Role) -> String {
+    let c = match role {
+        Role::Pawn => 'p',
+        Role::Knight => 'n',
+        Role::Bishop => 'b',
+        Role::Rook => 'r',
+        Role::Queen => 'q',
+        Role::King => 'k',
+    };
+    if color == Color::White {
+        c.to_ascii_uppercase().to_string()
+    } else {
+        c.to_string()
+    }
+}
+
+#[derive(Serialize)]
+struct RenderStateData {
+    fen: String,
+    board: HashMap<String, String>,
+    #[serde(rename = "legalMoves")]
+    legal_moves: Vec<String>,
+    status: u8,
+    #[serde(rename = "isCheck")]
+    is_check: bool,
+    #[serde(rename = "canUndo")]
+    can_undo: bool,
+    #[serde(rename = "canRedo")]
+    can_redo: bool,
+    #[serde(rename = "currentTurn")]
+    current_turn: String,
 }
 
 #[wasm_bindgen]
@@ -101,6 +131,10 @@ impl ChessGame {
         self.redo_stack.clear();
         Ok(())
     }
+
+    fn current_pos(&self) -> &Chess {
+        self.history.last().expect("history must never be empty")
+    }
 }
 
 #[wasm_bindgen]
@@ -114,8 +148,7 @@ impl ChessGame {
     }
 
     pub fn current_fen(&self) -> String {
-        let pos = self.history.last().expect("history must never be empty");
-        Fen::from_position(pos.clone(), EnPassantMode::Legal).to_string()
+        Fen::from_position(self.current_pos().clone(), EnPassantMode::Legal).to_string()
     }
 
     pub fn apply_move(&mut self, uci_move: &str) -> Result<(), JsValue> {
@@ -143,15 +176,13 @@ impl ChessGame {
     }
 
     pub fn game_status(&self) -> GameStatus {
-        let pos = self.history.last().expect("history must never be empty");
+        let pos = self.current_pos();
         if pos.is_checkmate() {
             GameStatus::Checkmate
         } else if pos.is_stalemate() {
             GameStatus::Stalemate
         } else if pos.is_insufficient_material() {
             GameStatus::Draw
-        } else if pos.is_check() {
-            GameStatus::Check
         } else {
             GameStatus::InProgress
         }
@@ -163,6 +194,43 @@ impl ChessGame {
 
     pub fn can_redo(&self) -> bool {
         !self.redo_stack.is_empty()
+    }
+
+    pub fn render_state(&self) -> Result<JsValue, JsValue> {
+        let pos = self.current_pos();
+        let fen = Fen::from_position(pos.clone(), EnPassantMode::Legal).to_string();
+
+        let board: HashMap<String, String> = pos
+            .board()
+            .clone()
+            .into_iter()
+            .map(|(sq, piece)| {
+                let sq_str = sq.to_string();
+                let piece_str = piece_char(piece.color, piece.role);
+                (sq_str, piece_str)
+            })
+            .collect();
+
+        let legal_moves = get_legal_moves_core(&fen).unwrap_or_default();
+
+        let current_turn = if pos.turn() == Color::White {
+            "white".to_string()
+        } else {
+            "black".to_string()
+        };
+
+        let data = RenderStateData {
+            fen,
+            board,
+            legal_moves,
+            status: self.game_status() as u8,
+            is_check: pos.is_check(),
+            can_undo: self.can_undo(),
+            can_redo: self.can_redo(),
+            current_turn,
+        };
+
+        serde_wasm_bindgen::to_value(&data).map_err(|e| JsValue::from_str(&e.to_string()))
     }
 }
 
@@ -242,22 +310,6 @@ mod tests {
             fen_from_starting_position(),
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         );
-    }
-
-    #[test]
-    fn test_fen_valid() {
-        assert!(fen_is_valid(
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-        ));
-        assert!(fen_is_valid(
-            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
-        ));
-    }
-
-    #[test]
-    fn test_fen_invalid() {
-        assert!(!fen_is_valid("not a fen string"));
-        assert!(!fen_is_valid(""));
     }
 
     #[test]
@@ -437,16 +489,29 @@ mod tests {
     }
 
     #[test]
-    fn game_status_check() {
+    fn check_position_game_status_is_in_progress() {
+        // In check, game is still InProgress (not a terminal state)
         let fen: Fen = "4k3/8/8/8/8/8/8/4RK2 b - - 0 1".parse().unwrap();
         let pos: Chess = fen
             .into_position(shakmaty::CastlingMode::Standard)
             .unwrap();
+        assert!(pos.is_check(), "position should be in check");
         let game = ChessGame {
             history: vec![pos],
             redo_stack: Vec::new(),
         };
-        assert_eq!(game.game_status(), GameStatus::Check);
+        // game_status() returns InProgress for check (not a separate Check state)
+        assert_eq!(game.game_status(), GameStatus::InProgress);
+    }
+
+    #[test]
+    fn is_check_detected_via_position() {
+        let fen: Fen = "4k3/8/8/8/8/8/8/4RK2 b - - 0 1".parse().unwrap();
+        let pos: Chess = fen
+            .into_position(shakmaty::CastlingMode::Standard)
+            .unwrap();
+        // pos.is_check() should return true for this check position
+        assert!(pos.is_check());
     }
 
     #[test]
