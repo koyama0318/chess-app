@@ -7,19 +7,24 @@
     "build:wasm": "cd wasm && wasm-pack build --target web --out-dir ../wasm-pkg",
     "build:web": "vite build",
     "build": "bun run build:wasm && bun run build:web",
-    "dev": "bun run build:wasm && vite"
+    "dev": "bun run build:wasm && vite",
+    "test": "vitest run"
   },
   "dependencies": {
     "react": "^19",
     "react-dom": "^19"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4",
+    "jsdom": "^29.0.1",
     "typescript": "^5",
     "vite": "^6",
     "vite-plugin-wasm": "^3",
+    "vitest": "^4.1.1",
     "wrangler": "^4"
   }
 }
