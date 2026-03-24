@@ -7,6 +7,5 @@ export type WorkerRequest =
   | { type: "REDO" };
 
 export type WorkerResponse =
-  | { type: "READY" }
   | { type: "STATE_UPDATE"; payload: RenderState }
   | { type: "ERROR"; payload: { message: string } };
