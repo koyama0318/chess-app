@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useChessWorker } from "./hooks/useChessWorker";
 import { WasmErrorBoundary } from "./components/WasmErrorBoundary";
+import { StartScreen } from "./components/StartScreen";
 import { Board } from "./components/Board";
 import { GameStatus } from "./components/GameStatus";
 import { FlipButton } from "./components/FlipButton";
 import { GameOverModal } from "./components/GameOverModal";
 import { ResetButton } from "./components/ResetButton";
 import { getFenTurn } from "./utils/fen";
+import { loadMoveEvents } from "./utils/storage";
+import type { GameMode, AppPhase } from "./types/game";
 
 function LoadingIndicator() {
   return (
@@ -28,7 +31,7 @@ function ErrorMessage({ message }: { message: string }) {
   );
 }
 
-function ChessApp() {
+function ChessApp({ gameMode: _gameMode }: { gameMode: GameMode | null }) {
   const { initState, renderState, sendMove, sendUndo, sendRedo, resetGame } =
     useChessWorker();
   const [flipped, setFlipped] = useState(false);
@@ -92,13 +95,35 @@ function ChessApp() {
 }
 
 export function App() {
+  const [phase, setPhase] = useState<AppPhase>("mode-select");
+  const [gameMode, setGameMode] = useState<GameMode | null>(null);
+
+  // Skip mode-select if localStorage has saved moves
+  useEffect(() => {
+    const savedMoves = loadMoveEvents();
+    if (savedMoves.length > 0) {
+      setGameMode("human-vs-human");
+      setPhase("playing");
+    }
+  }, []);
+
+  const handleSelectMode = (mode: GameMode) => {
+    setGameMode(mode);
+    setPhase("playing");
+  };
+
+  if (phase === "mode-select") {
+    return <StartScreen onSelectMode={handleSelectMode} />;
+  }
+
+  // phase === "playing"
   return (
     <WasmErrorBoundary
       fallback={
         <ErrorMessage message="Something went wrong initializing the chess engine." />
       }
     >
-      <ChessApp />
+      <ChessApp gameMode={gameMode} />
     </WasmErrorBoundary>
   );
 }
