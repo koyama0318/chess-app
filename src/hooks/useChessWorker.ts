@@ -2,6 +2,11 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import type { RenderState } from "../types/chess";
 import type { WorkerResponse } from "../worker/types";
 import ChessWorker from "../worker/chess.worker?worker";
+import {
+  saveMoveEvent,
+  loadMoveEvents,
+  clearMoveEvents,
+} from "../utils/storage";
 
 export type InitState = "uninit" | "initializing" | "ready" | "error";
 
@@ -50,6 +55,7 @@ export interface UseChessWorkerReturn {
   sendMove: (uciMove: string) => void;
   sendUndo: () => void;
   sendRedo: () => void;
+  resetGame: () => void;
 }
 
 export function useChessWorker(): UseChessWorkerReturn {
@@ -73,7 +79,16 @@ export function useChessWorker(): UseChessWorkerReturn {
     };
 
     dispatch({ type: "START_INIT" });
-    worker.postMessage({ type: "INIT" });
+
+    const savedMoves = loadMoveEvents();
+    if (savedMoves.length > 0) {
+      worker.postMessage({
+        type: "INIT_FROM_EVENTS",
+        payload: { uciMoves: savedMoves },
+      });
+    } else {
+      worker.postMessage({ type: "INIT" });
+    }
 
     return () => {
       worker.terminate();
@@ -82,6 +97,7 @@ export function useChessWorker(): UseChessWorkerReturn {
   }, []);
 
   const sendMove = useCallback((uciMove: string) => {
+    saveMoveEvent(uciMove);
     workerRef.current?.postMessage({
       type: "APPLY_MOVE",
       payload: { uciMove },
@@ -96,6 +112,11 @@ export function useChessWorker(): UseChessWorkerReturn {
     workerRef.current?.postMessage({ type: "REDO" });
   }, []);
 
+  const resetGame = useCallback(() => {
+    clearMoveEvents();
+    workerRef.current?.postMessage({ type: "INIT" });
+  }, []);
+
   return {
     initState: state.initState,
     renderState: state.renderState,
@@ -103,5 +124,6 @@ export function useChessWorker(): UseChessWorkerReturn {
     sendMove,
     sendUndo,
     sendRedo,
+    resetGame,
   };
 }
