@@ -3,6 +3,13 @@ import type { RenderState } from "../types/chess";
 import { parseFen, getFenTurn } from "../utils/fen";
 import type { Square } from "../utils/fen";
 
+export type PromotionPiece = "q" | "r" | "b" | "n";
+
+export interface PendingPromotion {
+  from: Square;
+  to: Square;
+}
+
 export function useBoardInteraction(
   renderState: RenderState | null,
   onMove: (uciMove: string) => void
@@ -10,9 +17,13 @@ export function useBoardInteraction(
   selectedSquare: Square | null;
   legalTargets: Square[];
   handleSquareClick: (square: Square) => void;
+  pendingPromotion: PendingPromotion | null;
+  handlePromotionSelect: (piece: PromotionPiece) => void;
+  handlePromotionCancel: () => void;
 } {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [legalTargets, setLegalTargets] = useState<Square[]>([]);
+  const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
 
   const handleSquareClick = useCallback(
     (square: Square) => {
@@ -23,16 +34,16 @@ export function useBoardInteraction(
 
       // If clicking a legal target, execute the move
       if (selectedSquare && legalTargets.includes(square)) {
-        // Find the best move: prefer promotion with queen
         const fromTo = `${selectedSquare}${square}`;
-        const promotionMove = renderState.legalMoves.find(
-          (m) => m.startsWith(fromTo) && m.length === 5 && m[4] === "q"
+        // Check if this is a promotion move
+        const isPromotion = renderState.legalMoves.some(
+          (m) => m.startsWith(fromTo) && m.length === 5
         );
-        const exactMove = renderState.legalMoves.find(
-          (m) => m === fromTo
-        );
-        const move = promotionMove ?? exactMove ?? fromTo;
-        onMove(move);
+        if (isPromotion) {
+          setPendingPromotion({ from: selectedSquare, to: square });
+          return;
+        }
+        onMove(fromTo);
         setSelectedSquare(null);
         setLegalTargets([]);
         return;
@@ -68,5 +79,27 @@ export function useBoardInteraction(
     [renderState, selectedSquare, legalTargets, onMove]
   );
 
-  return { selectedSquare, legalTargets, handleSquareClick };
+  const handlePromotionSelect = useCallback(
+    (piece: PromotionPiece) => {
+      if (!pendingPromotion) return;
+      onMove(`${pendingPromotion.from}${pendingPromotion.to}${piece}`);
+      setPendingPromotion(null);
+      setSelectedSquare(null);
+      setLegalTargets([]);
+    },
+    [pendingPromotion, onMove]
+  );
+
+  const handlePromotionCancel = useCallback(() => {
+    setPendingPromotion(null);
+  }, []);
+
+  return {
+    selectedSquare,
+    legalTargets,
+    handleSquareClick,
+    pendingPromotion,
+    handlePromotionSelect,
+    handlePromotionCancel,
+  };
 }
