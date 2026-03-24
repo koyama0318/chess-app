@@ -1,8 +1,37 @@
+use shakmaty::fen::Fen;
+use shakmaty::CastlingMode;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn greet() -> String {
-    "hello world from wasm".to_string()
+pub fn fen_from_starting_position() -> String {
+    let fen = Fen::default();
+    fen.to_string()
+}
+
+#[wasm_bindgen]
+pub fn fen_is_valid(fen: &str) -> bool {
+    let parsed: Result<Fen, _> = fen.parse();
+    match parsed {
+        Ok(f) => f
+            .into_position::<shakmaty::Chess>(CastlingMode::Standard)
+            .is_ok(),
+        Err(_) => false,
+    }
+}
+
+/// Inner implementation that returns Result<String, String> for native testability.
+pub fn fen_roundtrip_inner(fen: &str) -> Result<String, String> {
+    let parsed: Fen = fen.parse().map_err(|e: shakmaty::fen::ParseFenError| e.to_string())?;
+    let position = parsed
+        .into_position::<shakmaty::Chess>(CastlingMode::Standard)
+        .map_err(|e| e.to_string())?;
+    let fen_out = Fen::from_position(position, shakmaty::EnPassantMode::Legal);
+    Ok(fen_out.to_string())
+}
+
+#[wasm_bindgen]
+pub fn fen_roundtrip(fen: &str) -> Result<String, JsValue> {
+    fen_roundtrip_inner(fen).map_err(|e| JsValue::from_str(&e))
 }
 
 // --- Chess Game ---
