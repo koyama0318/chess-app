@@ -3,6 +3,11 @@ use shakmaty::CastlingMode;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
+pub fn greet() -> String {
+    "hello world from wasm".to_string()
+}
+
+#[wasm_bindgen]
 pub fn fen_from_starting_position() -> String {
     let fen = Fen::default();
     fen.to_string()
