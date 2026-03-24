@@ -19,15 +19,15 @@ vi.mock("../../worker/chess.worker?worker", () => {
 
 // Mock storage module
 vi.mock("../../utils/storage", () => ({
-  loadMoveEvents: vi.fn(() => []),
+  loadGameState: vi.fn(() => ({ fenSnapshot: null, uciMoves: [] })),
   saveMoveEvent: vi.fn(),
   clearMoveEvents: vi.fn(),
 }));
 
-import { loadMoveEvents } from "../../utils/storage";
+import { loadGameState } from "../../utils/storage";
 
 beforeEach(() => {
-  vi.mocked(loadMoveEvents).mockReturnValue([]);
+  vi.mocked(loadGameState).mockReturnValue({ fenSnapshot: null, uciMoves: [] });
 });
 
 describe("App", () => {
@@ -52,7 +52,7 @@ describe("App", () => {
   });
 
   it("skips start screen when localStorage has saved moves", () => {
-    vi.mocked(loadMoveEvents).mockReturnValue(["e2e4", "e7e5"]);
+    vi.mocked(loadGameState).mockReturnValue({ fenSnapshot: null, uciMoves: ["e2e4", "e7e5"] });
 
     render(<App />);
 

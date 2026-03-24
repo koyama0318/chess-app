@@ -27,8 +27,15 @@ const mockPostMessage = vi.fn();
 vi.stubGlobal("postMessage", mockPostMessage);
 
 // --- Mock Worker constructor for Stockfish ---
-function makeMockStockfishWorker() {
-  const worker = {
+type MockWorker = {
+  postMessage: ReturnType<typeof vi.fn>;
+  onmessage: ((e: MessageEvent) => void) | null;
+  onerror: ((e: ErrorEvent) => void) | null;
+  terminate: ReturnType<typeof vi.fn>;
+};
+
+function makeMockStockfishWorker(): MockWorker {
+  const worker: MockWorker = {
     postMessage: vi.fn().mockImplementation((msg: string) => {
       // Simulate UCI handshake
       if (msg === "uci") {
@@ -37,21 +44,14 @@ function makeMockStockfishWorker() {
         setTimeout(() => worker.onmessage?.({ data: "readyok" } as MessageEvent), 0);
       }
     }),
-    onmessage: null as ((e: MessageEvent) => void) | null,
-    onerror: null as ((e: ErrorEvent) => void) | null,
+    onmessage: null,
+    onerror: null,
     terminate: vi.fn(),
   };
   return worker;
 }
 
-let mockStockfishWorker: ReturnType<typeof makeMockStockfishWorker>;
-
-vi.stubGlobal(
-  "Worker",
-  function MockWorker(this: unknown) {
-    return mockStockfishWorker;
-  }
-);
+let mockStockfishWorker: MockWorker;
 
 // --- Import handler ---
 let handleMessage: (event: MessageEvent<WorkerRequest>) => Promise<void>;
@@ -60,6 +60,9 @@ beforeEach(async () => {
   vi.resetModules();
   mockPostMessage.mockClear();
   mockStockfishWorker = makeMockStockfishWorker();
+  vi.stubGlobal("Worker", function MockWorker(this: unknown) {
+    return mockStockfishWorker;
+  });
   const mod = await import("../chess.worker");
   handleMessage = mod.handleMessage;
 });
@@ -88,9 +91,15 @@ describe("INIT_ENGINE message", () => {
     expect(mockStockfishWorker.postMessage).toHaveBeenCalledWith("isready");
   });
 
-  it("responds ERROR if Worker throws", async () => {
-    mockStockfishWorker.postMessage.mockImplementationOnce(() => {
-      throw new Error("Worker failed to start");
+  it("responds ERROR if Worker onerror fires", async () => {
+    // Make the mock fire onerror instead of completing the handshake
+    mockStockfishWorker.postMessage.mockImplementation((msg: string) => {
+      if (msg === "uci") {
+        setTimeout(
+          () => mockStockfishWorker.onerror?.(new ErrorEvent("error", { message: "load failed" })),
+          0
+        );
+      }
     });
     await handleMessage(
       new MessageEvent("message", { data: { type: "INIT_ENGINE" } })
@@ -98,5 +107,28 @@ describe("INIT_ENGINE message", () => {
     expect(mockPostMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: "ERROR" }) satisfies WorkerResponse
     );
+  });
+
+  it("terminates previous Stockfish Worker on double INIT_ENGINE", async () => {
+    // First init
+    await handleMessage(
+      new MessageEvent("message", { data: { type: "INIT_ENGINE" } })
+    );
+    const firstWorker = mockStockfishWorker;
+
+    // Create a new mock for the second Worker construction
+    const secondWorker = makeMockStockfishWorker();
+    let callCount = 0;
+    vi.stubGlobal("Worker", function MockWorker(this: unknown) {
+      callCount++;
+      return callCount === 1 ? firstWorker : secondWorker;
+    });
+
+    // Second init should terminate the first
+    mockStockfishWorker = secondWorker;
+    await handleMessage(
+      new MessageEvent("message", { data: { type: "INIT_ENGINE" } })
+    );
+    expect(firstWorker.terminate).toHaveBeenCalled();
   });
 });

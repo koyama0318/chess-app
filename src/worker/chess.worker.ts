@@ -26,30 +26,27 @@ async function initWasm(fenSnapshot?: string | null): Promise<void> {
   }
 }
 
-function sendUCI(command: string): void {
-  if (!stockfish) throw new Error("Stockfish not initialized");
-  stockfish.postMessage(command);
-}
-
-function onStockfishMessage(handler: (line: string) => void): void {
-  if (!stockfish) throw new Error("Stockfish not initialized");
-  stockfish.onmessage = (e: MessageEvent<string>) => handler(e.data);
-}
-
 async function initStockfish(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    stockfish = new Worker("/stockfish-18-lite-single.js");
-    stockfish.onerror = (e) => reject(e);
+  // Terminate any previous Stockfish instance to avoid leaks
+  if (stockfish) {
+    stockfish.terminate();
+    stockfish = null;
+  }
 
-    onStockfishMessage((line) => {
-      if (line === "uciok") {
-        sendUCI("isready");
-      } else if (line === "readyok") {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker("/stockfish-18-lite-single.js");
+    stockfish = worker;
+
+    worker.onerror = (e) => reject(e);
+    worker.onmessage = (e: MessageEvent<string>) => {
+      if (e.data === "uciok") {
+        worker.postMessage("isready");
+      } else if (e.data === "readyok") {
         resolve();
       }
-    });
+    };
 
-    sendUCI("uci");
+    worker.postMessage("uci");
   });
 }
 

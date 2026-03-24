@@ -8,7 +8,7 @@ import { FlipButton } from "./components/FlipButton";
 import { GameOverModal } from "./components/GameOverModal";
 import { ResetButton } from "./components/ResetButton";
 import { getFenTurn } from "./utils/fen";
-import { loadMoveEvents } from "./utils/storage";
+import { loadGameState } from "./utils/storage";
 import type { GameMode, AppPhase } from "./types/game";
 
 function LoadingIndicator() {
@@ -100,7 +100,7 @@ export function App() {
 
   // Skip mode-select if localStorage has saved moves
   useEffect(() => {
-    const savedMoves = loadMoveEvents();
+    const { uciMoves: savedMoves } = loadGameState();
     if (savedMoves.length > 0) {
       setGameMode("human-vs-human");
       setPhase("playing");
