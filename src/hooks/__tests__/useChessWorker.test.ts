@@ -217,7 +217,7 @@ describe("useChessWorker", () => {
 
       act(() => {
         workerInstance.onmessage?.(
-          new MessageEvent("message", { data: { type: "READY" } })
+          new MessageEvent("message", { data: INIT_STATE_UPDATE })
         );
       });
 
@@ -234,7 +234,7 @@ describe("useChessWorker", () => {
 
       act(() => {
         workerInstance.onmessage?.(
-          new MessageEvent("message", { data: { type: "READY" } })
+          new MessageEvent("message", { data: INIT_STATE_UPDATE })
         );
       });
 

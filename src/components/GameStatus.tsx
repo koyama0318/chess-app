@@ -16,7 +16,6 @@ export function GameStatus({ status, currentTurn }: GameStatusProps) {
 
   const messages: Record<GameStatusEnum, string> = {
     [GameStatusEnum.InProgress]: "",
-    [GameStatusEnum.Check]: `${currentTurn === "white" ? "White" : "Black"} is in check`,
     [GameStatusEnum.Checkmate]: `Checkmate — ${currentTurn === "white" ? "Black" : "White"} wins!`,
     [GameStatusEnum.Stalemate]: "Stalemate — Draw!",
     [GameStatusEnum.Draw]: "Draw!",
