@@ -32,6 +32,9 @@ function reducer(state: State, action: Action): State {
       // Post-init errors (APPLY_MOVE, UNDO, REDO): store message without state change
       return { ...state, lastError: action.message };
     case "STATE_UPDATE":
+      if (state.initState === "initializing") {
+        return { ...state, initState: "ready", renderState: action.payload };
+      }
       return { ...state, renderState: action.payload };
     default:
       return state;

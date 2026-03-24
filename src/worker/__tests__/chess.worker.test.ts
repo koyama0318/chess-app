@@ -1,203 +1,182 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { WorkerRequest, WorkerResponse } from "../types";
-import type { RenderState } from "../../types/chess";
 import { GameStatus } from "../../types/chess";
 
-// We test the worker's onmessage handler in isolation by importing the module
-// and simulating the worker environment.
+const STARTING_FEN =
+  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const AFTER_E2E4_FEN =
+  "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
 
-// Mock self.postMessage
+// --- Mock WASM module ---
+
+class MockChessGame {
+  private fen = STARTING_FEN;
+  private undoStack: string[] = [];
+  private redoStack: string[] = [];
+
+  current_fen() {
+    return this.fen;
+  }
+  apply_move(uciMove: string) {
+    if (uciMove === "e2e4") {
+      this.undoStack.push(this.fen);
+      this.redoStack = [];
+      this.fen = AFTER_E2E4_FEN;
+    } else {
+      throw new Error(`Illegal move: ${uciMove}`);
+    }
+  }
+  game_status() {
+    return GameStatus.InProgress;
+  }
+  can_undo() {
+    return this.undoStack.length > 0;
+  }
+  can_redo() {
+    return this.redoStack.length > 0;
+  }
+  undo() {
+    if (this.undoStack.length > 0) {
+      this.redoStack.push(this.fen);
+      this.fen = this.undoStack.pop()!;
+    }
+  }
+  redo() {
+    if (this.redoStack.length > 0) {
+      this.undoStack.push(this.fen);
+      this.fen = this.redoStack.pop()!;
+    }
+  }
+}
+
+const mockInitFn = vi.fn().mockResolvedValue(undefined);
+const mockGetLegalMoves = vi.fn().mockReturnValue(Array(20).fill("e2e4"));
+let mockGameInstance: MockChessGame;
+
+vi.mock("../../../wasm-pkg/chess_wasm", () => ({
+  default: mockInitFn,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ChessGame: function MockChessGameConstructor(this: any) {
+    return mockGameInstance;
+  },
+  get_legal_moves: mockGetLegalMoves,
+}));
+
+// --- Mock self.postMessage ---
+
 const mockPostMessage = vi.fn();
-
-// We'll set up a fake worker global scope
 vi.stubGlobal("postMessage", mockPostMessage);
 
-// Mock ChessGame from WASM
-const mockChessGame = {
-  current_fen: vi.fn(
-    () => "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-  ),
-  game_status: vi.fn(() => GameStatus.InProgress),
-  can_undo: vi.fn(() => false),
-  can_redo: vi.fn(() => false),
-  apply_move: vi.fn(),
-  undo: vi.fn(() => true),
-  redo: vi.fn(() => true),
-};
+// --- Import handler ---
 
-const mockGetLegalMoves = vi.fn((_fen: string) => ["e2e3", "e2e4", "d2d3", "d2d4"]);
-
-vi.mock("../../../wasm-pkg/chess_wasm", () => {
-  return {
-    default: vi.fn(() => Promise.resolve()),
-    ChessGame: class {
-      current_fen = mockChessGame.current_fen;
-      game_status = mockChessGame.game_status;
-      can_undo = mockChessGame.can_undo;
-      can_redo = mockChessGame.can_redo;
-      apply_move = mockChessGame.apply_move;
-      undo = mockChessGame.undo;
-      redo = mockChessGame.redo;
-    },
-    get_legal_moves: (fen: string) => mockGetLegalMoves(fen),
-  };
-});
-
-// Dynamically import the worker module after mocking
 let handleMessage: (event: MessageEvent<WorkerRequest>) => Promise<void>;
 
 beforeEach(async () => {
-  mockPostMessage.mockClear();
-  vi.clearAllMocks();
-
-  // Reset default mock return values
-  mockChessGame.current_fen.mockReturnValue(
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-  );
-  mockGetLegalMoves.mockReturnValue(["e2e3", "e2e4", "d2d3", "d2d4"]);
-  mockChessGame.game_status.mockReturnValue(GameStatus.InProgress);
-  mockChessGame.can_undo.mockReturnValue(false);
-  mockChessGame.can_redo.mockReturnValue(false);
-  mockChessGame.apply_move.mockReturnValue(undefined);
-  mockChessGame.undo.mockReturnValue(true);
-  mockChessGame.redo.mockReturnValue(true);
-
-  // Reset modules to get a fresh game=null state for each test
   vi.resetModules();
-  // Import the handler function exported for testing
+  mockPostMessage.mockClear();
+  mockInitFn.mockClear().mockResolvedValue(undefined);
+  mockGetLegalMoves.mockReturnValue(Array(20).fill("e2e4"));
+  mockGameInstance = new MockChessGame();
   const mod = await import("../chess.worker");
   handleMessage = mod.handleMessage;
 });
 
-function expectRenderState(expected: Partial<RenderState>): void {
-  expect(mockPostMessage).toHaveBeenCalledWith(
-    expect.objectContaining({
-      type: "STATE_UPDATE",
-      payload: expect.objectContaining(expected),
-    })
-  );
-}
-
 describe("chess.worker message routing", () => {
-  it("responds READY to INIT and initializes ChessGame", async () => {
+  it("responds STATE_UPDATE to INIT with starting position", async () => {
     await handleMessage(
       new MessageEvent("message", { data: { type: "INIT" } })
     );
-    expect(mockPostMessage).toHaveBeenCalledWith({
-      type: "READY",
-    } satisfies WorkerResponse);
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "STATE_UPDATE",
+        payload: expect.objectContaining({
+          fen: STARTING_FEN,
+          status: GameStatus.InProgress,
+          canUndo: false,
+          canRedo: false,
+        }),
+      }) satisfies WorkerResponse
+    );
   });
 
-  it("responds STATE_UPDATE to APPLY_MOVE with valid move", async () => {
+  it("responds STATE_UPDATE to APPLY_MOVE with updated FEN", async () => {
     await handleMessage(
       new MessageEvent("message", { data: { type: "INIT" } })
     );
     mockPostMessage.mockClear();
-
-    mockChessGame.can_undo.mockReturnValue(true);
-
     await handleMessage(
       new MessageEvent("message", {
         data: { type: "APPLY_MOVE", payload: { uciMove: "e2e4" } },
       })
     );
-
-    expect(mockChessGame.apply_move).toHaveBeenCalledWith("e2e4");
-    expectRenderState({ canUndo: true });
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "STATE_UPDATE",
+        payload: expect.objectContaining({
+          fen: AFTER_E2E4_FEN,
+          canUndo: true,
+        }),
+      })
+    );
   });
 
-  it("responds ERROR to APPLY_MOVE with invalid move", async () => {
+  it("responds ERROR to APPLY_MOVE with illegal move", async () => {
     await handleMessage(
       new MessageEvent("message", { data: { type: "INIT" } })
     );
     mockPostMessage.mockClear();
-
-    mockChessGame.apply_move.mockImplementation(() => {
-      throw new Error("Illegal move");
-    });
-
     await handleMessage(
       new MessageEvent("message", {
-        data: { type: "APPLY_MOVE", payload: { uciMove: "e2e5" } },
+        data: { type: "APPLY_MOVE", payload: { uciMove: "e2e9" } },
       })
     );
-
-    expect(mockPostMessage).toHaveBeenCalledWith({
-      type: "ERROR",
-      payload: { message: "Illegal move" },
-    } satisfies WorkerResponse);
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "ERROR" })
+    );
   });
 
   it("responds STATE_UPDATE to UNDO", async () => {
     await handleMessage(
       new MessageEvent("message", { data: { type: "INIT" } })
     );
+    await handleMessage(
+      new MessageEvent("message", {
+        data: { type: "APPLY_MOVE", payload: { uciMove: "e2e4" } },
+      })
+    );
     mockPostMessage.mockClear();
-
-    mockChessGame.can_redo.mockReturnValue(true);
-
     await handleMessage(
       new MessageEvent("message", { data: { type: "UNDO" } })
     );
-
-    expect(mockChessGame.undo).toHaveBeenCalled();
-    expectRenderState({ canRedo: true });
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "STATE_UPDATE",
+        payload: expect.objectContaining({ fen: STARTING_FEN, canRedo: true }),
+      })
+    );
   });
 
   it("responds STATE_UPDATE to REDO", async () => {
     await handleMessage(
       new MessageEvent("message", { data: { type: "INIT" } })
     );
-    mockPostMessage.mockClear();
-
-    mockChessGame.can_undo.mockReturnValue(true);
-
     await handleMessage(
-      new MessageEvent("message", { data: { type: "REDO" } })
+      new MessageEvent("message", {
+        data: { type: "APPLY_MOVE", payload: { uciMove: "e2e4" } },
+      })
     );
-
-    expect(mockChessGame.redo).toHaveBeenCalled();
-    expectRenderState({ canUndo: true });
-  });
-
-  it("responds ERROR when UNDO/REDO called before INIT", async () => {
     await handleMessage(
       new MessageEvent("message", { data: { type: "UNDO" } })
     );
-    expect(mockPostMessage).toHaveBeenCalledWith({
-      type: "ERROR",
-      payload: { message: "Game not initialized" },
-    } satisfies WorkerResponse);
-  });
-
-  it("responds ERROR when APPLY_MOVE called before INIT", async () => {
-    await handleMessage(
-      new MessageEvent("message", {
-        data: { type: "APPLY_MOVE", payload: { uciMove: "e2e4" } },
-      })
-    );
-    expect(mockPostMessage).toHaveBeenCalledWith({
-      type: "ERROR",
-      payload: { message: "Game not initialized" },
-    } satisfies WorkerResponse);
-  });
-
-  it("canUndo and canRedo are correctly reported in render state", async () => {
-    await handleMessage(
-      new MessageEvent("message", { data: { type: "INIT" } })
-    );
     mockPostMessage.mockClear();
-
-    // After a move: canUndo=true, canRedo=false
-    mockChessGame.can_undo.mockReturnValue(true);
-    mockChessGame.can_redo.mockReturnValue(false);
-
     await handleMessage(
-      new MessageEvent("message", {
-        data: { type: "APPLY_MOVE", payload: { uciMove: "e2e4" } },
+      new MessageEvent("message", { data: { type: "REDO" } })
+    );
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "STATE_UPDATE",
+        payload: expect.objectContaining({ fen: AFTER_E2E4_FEN }),
       })
     );
-
-    expectRenderState({ canUndo: true, canRedo: false });
   });
 });

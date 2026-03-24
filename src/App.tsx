@@ -1,6 +1,10 @@
+import { useState } from "react";
 import { useChessWorker } from "./hooks/useChessWorker";
 import { WasmErrorBoundary } from "./components/WasmErrorBoundary";
-import { UndoRedoButtons } from "./components/UndoRedoButtons";
+import { Board } from "./components/Board";
+import { GameStatus } from "./components/GameStatus";
+import { FlipButton } from "./components/FlipButton";
+import { getFenTurn } from "./utils/fen";
 
 function LoadingIndicator() {
   return (
@@ -23,7 +27,9 @@ function ErrorMessage({ message }: { message: string }) {
 }
 
 function ChessApp() {
-  const { initState, renderState, sendUndo, sendRedo } = useChessWorker();
+  const { initState, renderState, sendMove, sendUndo, sendRedo } =
+    useChessWorker();
+  const [flipped, setFlipped] = useState(false);
 
   switch (initState) {
     case "uninit":
@@ -31,23 +37,46 @@ function ChessApp() {
     case "initializing":
       return <LoadingIndicator />;
     case "error":
-      return (
-        <ErrorMessage message="Failed to initialize chess engine." />
-      );
+      return <ErrorMessage message="Failed to initialize chess engine." />;
     case "ready":
+      if (!renderState) return <LoadingIndicator />;
       return (
-        <div>
-          <p>
-            {renderState
-              ? `FEN: ${renderState.fen}`
-              : "Chess engine ready"}
-          </p>
-          <UndoRedoButtons
-            canUndo={renderState?.canUndo ?? false}
-            canRedo={renderState?.canRedo ?? false}
-            onUndo={sendUndo}
-            onRedo={sendRedo}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "12px",
+            padding: "16px",
+            fontFamily: "sans-serif",
+          }}
+        >
+          <GameStatus
+            status={renderState.status}
+            currentTurn={getFenTurn(renderState.fen)}
           />
+          <Board
+            renderState={renderState}
+            onMove={sendMove}
+            flipped={flipped}
+          />
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              onClick={sendUndo}
+              disabled={!renderState.canUndo}
+              type="button"
+            >
+              Undo
+            </button>
+            <FlipButton onClick={() => setFlipped((f) => !f)} />
+            <button
+              onClick={sendRedo}
+              disabled={!renderState.canRedo}
+              type="button"
+            >
+              Redo
+            </button>
+          </div>
         </div>
       );
   }

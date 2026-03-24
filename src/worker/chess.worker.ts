@@ -1,19 +1,22 @@
-import type { WorkerRequest, WorkerResponse } from "./types";
 import type { RenderState } from "../types/chess";
-import init, { ChessGame, get_legal_moves } from "../../wasm-pkg/chess_wasm";
+import type { WorkerRequest, WorkerResponse } from "./types";
 
-let game: ChessGame | null = null;
+type WasmModule = typeof import("../../wasm-pkg/chess_wasm");
+type ChessGameInstance = InstanceType<WasmModule["ChessGame"]>;
+
+let wasm: WasmModule | null = null;
+let game: ChessGameInstance | null = null;
 
 function postResponse(response: WorkerResponse): void {
   postMessage(response);
 }
 
 function buildRenderState(): RenderState {
-  if (!game) throw new Error("Game not initialized");
+  if (!wasm || !game) throw new Error("WASM not initialized");
   const fen = game.current_fen();
   return {
     fen,
-    legalMoves: get_legal_moves(fen),
+    legalMoves: Array.from(wasm.get_legal_moves(fen)),
     status: game.game_status(),
     canUndo: game.can_undo(),
     canRedo: game.can_redo(),
@@ -27,56 +30,61 @@ export async function handleMessage(
 
   switch (data.type) {
     case "INIT": {
-      await init();
-      game = new ChessGame();
-      postResponse({ type: "READY" });
+      try {
+        const mod = await import("../../wasm-pkg/chess_wasm");
+        await mod.default();
+        wasm = mod;
+        game = new mod.ChessGame();
+        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
+      } catch (e) {
+        postResponse({
+          type: "ERROR",
+          payload: { message: String(e) },
+        });
+      }
       break;
     }
     case "APPLY_MOVE": {
-      if (!game) {
-        postResponse({
-          type: "ERROR",
-          payload: { message: "Game not initialized" },
-        });
-        return;
-      }
       try {
+        if (!game) throw new Error("Not initialized");
         game.apply_move(data.payload.uciMove);
         postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : String(e);
-        postResponse({ type: "ERROR", payload: { message } });
+      } catch (e) {
+        postResponse({
+          type: "ERROR",
+          payload: { message: String(e) },
+        });
       }
       break;
     }
     case "UNDO": {
-      if (!game) {
+      try {
+        if (!game) throw new Error("Not initialized");
+        game.undo();
+        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
+      } catch (e) {
         postResponse({
           type: "ERROR",
-          payload: { message: "Game not initialized" },
+          payload: { message: String(e) },
         });
-        return;
       }
-      game.undo();
-      postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
       break;
     }
     case "REDO": {
-      if (!game) {
+      try {
+        if (!game) throw new Error("Not initialized");
+        game.redo();
+        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
+      } catch (e) {
         postResponse({
           type: "ERROR",
-          payload: { message: "Game not initialized" },
+          payload: { message: String(e) },
         });
-        return;
       }
-      game.redo();
-      postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
       break;
     }
   }
 }
 
 // Attach to self.onmessage when running as a Web Worker
-onmessage = (event: MessageEvent<WorkerRequest>) => {
-  void handleMessage(event);
-};
+onmessage = handleMessage;
