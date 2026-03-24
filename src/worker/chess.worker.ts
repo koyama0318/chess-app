@@ -33,15 +33,23 @@ async function initStockfish(): Promise<void> {
     stockfish = null;
   }
 
-  return new Promise((resolve, reject) => {
-    const worker = new Worker("/stockfish-18-lite-single.js");
-    stockfish = worker;
+  const worker = new Worker("/stockfish-18-lite-single.js");
+  stockfish = worker; // assign synchronously to prevent concurrent-init leaks
 
-    worker.onerror = (e) => reject(e);
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error("Stockfish UCI handshake timed out"));
+    }, 10000);
+
+    worker.onerror = (e) => {
+      clearTimeout(timeout);
+      reject(e);
+    };
     worker.onmessage = (e: MessageEvent<string>) => {
       if (e.data === "uciok") {
         worker.postMessage("isready");
       } else if (e.data === "readyok") {
+        clearTimeout(timeout);
         resolve();
       }
     };
@@ -126,8 +134,6 @@ export async function handleMessage(
       try {
         if (!game) throw new Error("Game not initialized");
         game.reset();
-        localStorage.removeItem("chess_events");
-        localStorage.removeItem("chess_snapshot");
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({

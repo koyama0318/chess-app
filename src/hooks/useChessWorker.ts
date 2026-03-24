@@ -16,13 +16,15 @@ interface State {
   initState: InitState;
   renderState: RenderState | null;
   lastError: string | null;
+  engineReady: boolean;
 }
 
 type Action =
   | { type: "START_INIT" }
   | { type: "RESET" }
   | { type: "ERROR"; message: string }
-  | { type: "STATE_UPDATE"; payload: RenderState };
+  | { type: "STATE_UPDATE"; payload: RenderState }
+  | { type: "ENGINE_READY" };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -42,6 +44,8 @@ function reducer(state: State, action: Action): State {
         return { ...state, initState: "ready", renderState: action.payload };
       }
       return { ...state, renderState: action.payload };
+    case "ENGINE_READY":
+      return { ...state, engineReady: true };
     default:
       return state;
   }
@@ -51,15 +55,18 @@ const initialState: State = {
   initState: "uninit",
   renderState: null,
   lastError: null,
+  engineReady: false,
 };
 
 export interface UseChessWorkerReturn {
   initState: InitState;
   renderState: RenderState | null;
   lastError: string | null;
+  engineReady: boolean;
   sendMove: (uciMove: string) => void;
   sendUndo: () => void;
   sendRedo: () => void;
+  sendInitEngine: () => void;
   resetGame: () => void;
 }
 
@@ -85,6 +92,9 @@ export function useChessWorker(): UseChessWorkerReturn {
           break;
         case "ERROR":
           dispatch({ type: "ERROR", message: msg.payload.message });
+          break;
+        case "ENGINE_READY":
+          dispatch({ type: "ENGINE_READY" });
           break;
       }
     };
@@ -136,14 +146,19 @@ export function useChessWorker(): UseChessWorkerReturn {
     workerRef.current?.postMessage({ type: "INIT" });
   }, []);
 
+  const sendInitEngine = useCallback(() => {
+    workerRef.current?.postMessage({ type: "INIT_ENGINE" });
+  }, []);
 
   return {
     initState: state.initState,
     renderState: state.renderState,
     lastError: state.lastError,
+    engineReady: state.engineReady,
     sendMove,
     sendUndo,
     sendRedo,
+    sendInitEngine,
     resetGame,
   };
 }

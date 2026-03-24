@@ -116,16 +116,14 @@ describe("INIT_ENGINE message", () => {
     );
     const firstWorker = mockStockfishWorker;
 
-    // Create a new mock for the second Worker construction
+    // Stub Worker so the second construction always returns secondWorker
     const secondWorker = makeMockStockfishWorker();
-    let callCount = 0;
     vi.stubGlobal("Worker", function MockWorker(this: unknown) {
-      callCount++;
-      return callCount === 1 ? firstWorker : secondWorker;
+      return secondWorker;
     });
+    mockStockfishWorker = secondWorker;
 
     // Second init should terminate the first
-    mockStockfishWorker = secondWorker;
     await handleMessage(
       new MessageEvent("message", { data: { type: "INIT_ENGINE" } })
     );

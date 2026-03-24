@@ -195,6 +195,34 @@ describe("useChessWorker", () => {
     expect(workerInstance.terminate).toHaveBeenCalled();
   });
 
+  it("sets engineReady on ENGINE_READY message", () => {
+    const { result } = renderHook(() => useChessWorker());
+
+    act(() => { sendStateUpdate(); });
+
+    expect(result.current.engineReady).toBe(false);
+
+    act(() => {
+      workerInstance.onmessage?.(
+        new MessageEvent("message", { data: { type: "ENGINE_READY" } })
+      );
+    });
+
+    expect(result.current.engineReady).toBe(true);
+  });
+
+  it("sendInitEngine posts INIT_ENGINE to worker", () => {
+    const { result } = renderHook(() => useChessWorker());
+
+    act(() => { sendStateUpdate(); });
+
+    act(() => {
+      result.current.sendInitEngine();
+    });
+
+    expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "INIT_ENGINE" });
+  });
+
   describe("localStorage event sourcing", () => {
     it("sends INIT_FROM_EVENTS when localStorage has saved moves", () => {
       vi.spyOn(storage, "loadGameState").mockReturnValue({
