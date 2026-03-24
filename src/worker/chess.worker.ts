@@ -1,29 +1,33 @@
 import type { WorkerRequest, WorkerResponse } from "./types";
-import type { RenderState } from "../types/chess";
+import { type RenderState, type GameStatus } from "../types/chess";
 import type { WasmModule } from "./loadWasm";
 import { loadWasm } from "./loadWasm";
-import type {
-  ChessGame as ChessGameType,
-  get_legal_moves as GetLegalMovesType,
-} from "../../wasm-pkg/chess_wasm.js";
 
-// Module-level state
-let game: ChessGameType | null = null;
-let getLegalMovesFn: typeof GetLegalMovesType | null = null;
+// Module-level state: both set together during INIT
+let engine: { game: WasmModule["ChessGame"]["prototype"]; getLegalMoves: WasmModule["get_legal_moves"] } | null = null;
 
 function postResponse(response: WorkerResponse): void {
   postMessage(response);
 }
 
-function buildRenderState(g: ChessGameType): RenderState {
+function buildRenderState(): RenderState {
+  const g = engine!.game;
   const fen = g.current_fen();
   return {
     fen,
-    legalMoves: getLegalMovesFn!(fen),
-    status: g.game_status(),
+    legalMoves: engine!.getLegalMoves(fen),
+    status: g.game_status() as GameStatus,
     canUndo: g.can_undo(),
     canRedo: g.can_redo(),
   };
+}
+
+function requireEngine(): boolean {
+  if (!engine) {
+    postResponse({ type: "ERROR", payload: { message: "Engine not initialized" } });
+    return false;
+  }
+  return true;
 }
 
 export async function handleMessage(
@@ -34,14 +38,11 @@ export async function handleMessage(
   switch (data.type) {
     case "INIT": {
       try {
-        const wasm: WasmModule = await loadWasm();
-        getLegalMovesFn = wasm.get_legal_moves;
-        game = new wasm.ChessGame();
+        const wasm = await loadWasm();
+        const game = new wasm.ChessGame();
+        engine = { game, getLegalMoves: wasm.get_legal_moves };
         postResponse({ type: "READY" });
-        postResponse({
-          type: "STATE_UPDATE",
-          payload: buildRenderState(game),
-        });
+        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
         postResponse({ type: "ERROR", payload: { message } });
@@ -49,19 +50,10 @@ export async function handleMessage(
       break;
     }
     case "APPLY_MOVE": {
-      if (!game || !getLegalMovesFn) {
-        postResponse({
-          type: "ERROR",
-          payload: { message: "Engine not initialized" },
-        });
-        return;
-      }
+      if (!requireEngine()) return;
       try {
-        game.apply_move(data.payload.uciMove);
-        postResponse({
-          type: "STATE_UPDATE",
-          payload: buildRenderState(game),
-        });
+        engine!.game.apply_move(data.payload.uciMove);
+        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
         postResponse({ type: "ERROR", payload: { message } });
@@ -69,33 +61,25 @@ export async function handleMessage(
       break;
     }
     case "UNDO": {
-      if (!game || !getLegalMovesFn) {
-        postResponse({
-          type: "ERROR",
-          payload: { message: "Engine not initialized" },
-        });
-        return;
+      if (!requireEngine()) return;
+      try {
+        engine!.game.undo();
+        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        postResponse({ type: "ERROR", payload: { message } });
       }
-      game.undo();
-      postResponse({
-        type: "STATE_UPDATE",
-        payload: buildRenderState(game),
-      });
       break;
     }
     case "REDO": {
-      if (!game || !getLegalMovesFn) {
-        postResponse({
-          type: "ERROR",
-          payload: { message: "Engine not initialized" },
-        });
-        return;
+      if (!requireEngine()) return;
+      try {
+        engine!.game.redo();
+        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        postResponse({ type: "ERROR", payload: { message } });
       }
-      game.redo();
-      postResponse({
-        type: "STATE_UPDATE",
-        payload: buildRenderState(game),
-      });
       break;
     }
   }
@@ -103,8 +87,7 @@ export async function handleMessage(
 
 // Exported for testing: reset module-level state
 export function _resetForTesting(): void {
-  game = null;
-  getLegalMovesFn = null;
+  engine = null;
 }
 
 // Attach to self.onmessage when running as a Web Worker
