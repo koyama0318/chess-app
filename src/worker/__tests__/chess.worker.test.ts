@@ -47,6 +47,18 @@ class MockChessGame {
       this.fen = this.redoStack.pop()!;
     }
   }
+  render_state() {
+    return {
+      fen: this.fen,
+      board: {},
+      legalMoves: ["e2e4"],
+      status: GameStatus.InProgress,
+      isCheck: false,
+      canUndo: this.can_undo(),
+      canRedo: this.can_redo(),
+      currentTurn: "white" as const,
+    };
+  }
 }
 
 const mockInitFn = vi.fn().mockResolvedValue(undefined);

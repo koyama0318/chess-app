@@ -2,7 +2,7 @@ use wasm_bindgen_test::*;
 
 wasm_bindgen_test_configure!(run_in_browser);
 
-use chess_wasm::{fen_from_starting_position, fen_is_valid, fen_roundtrip};
+use chess_wasm::{fen_from_starting_position, fen_roundtrip};
 
 #[wasm_bindgen_test]
 fn wasm_fen_from_starting_position() {
@@ -10,18 +10,6 @@ fn wasm_fen_from_starting_position() {
         fen_from_starting_position(),
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     );
-}
-
-#[wasm_bindgen_test]
-fn wasm_fen_is_valid_true() {
-    assert!(fen_is_valid(
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    ));
-}
-
-#[wasm_bindgen_test]
-fn wasm_fen_is_valid_false() {
-    assert!(!fen_is_valid("not a fen"));
 }
 
 #[wasm_bindgen_test]

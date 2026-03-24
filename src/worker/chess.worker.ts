@@ -4,29 +4,20 @@ import type { WorkerRequest, WorkerResponse } from "./types";
 type WasmModule = typeof import("../../wasm-pkg/chess_wasm");
 type ChessGameInstance = InstanceType<WasmModule["ChessGame"]>;
 
-let wasm: WasmModule | null = null;
 let game: ChessGameInstance | null = null;
 
 function postResponse(response: WorkerResponse): void {
   postMessage(response);
 }
 
-function buildRenderState(): RenderState {
-  if (!wasm || !game) throw new Error("WASM not initialized");
-  const fen = game.current_fen();
-  return {
-    fen,
-    legalMoves: Array.from(wasm.get_legal_moves(fen)),
-    status: game.game_status(),
-    canUndo: game.can_undo(),
-    canRedo: game.can_redo(),
-  };
+function getRenderState(): RenderState {
+  if (!game) throw new Error("Game not initialized");
+  return game.render_state() as unknown as RenderState;
 }
 
 async function initWasm(): Promise<void> {
   const mod = await import("../../wasm-pkg/chess_wasm");
   await mod.default();
-  wasm = mod;
   game = new mod.ChessGame();
 }
 
@@ -39,7 +30,7 @@ export async function handleMessage(
     case "INIT": {
       try {
         await initWasm();
-        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
+        postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({
           type: "ERROR",
@@ -54,7 +45,7 @@ export async function handleMessage(
         for (const move of data.payload.uciMoves) {
           game!.apply_move(move);
         }
-        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
+        postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({
           type: "ERROR",
@@ -65,9 +56,9 @@ export async function handleMessage(
     }
     case "APPLY_MOVE": {
       try {
-        if (!game) throw new Error("Not initialized");
+        if (!game) throw new Error("Game not initialized");
         game.apply_move(data.payload.uciMove);
-        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
+        postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({
           type: "ERROR",
@@ -78,9 +69,9 @@ export async function handleMessage(
     }
     case "UNDO": {
       try {
-        if (!game) throw new Error("Not initialized");
+        if (!game) throw new Error("Game not initialized");
         game.undo();
-        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
+        postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({
           type: "ERROR",
@@ -91,9 +82,9 @@ export async function handleMessage(
     }
     case "REDO": {
       try {
-        if (!game) throw new Error("Not initialized");
+        if (!game) throw new Error("Game not initialized");
         game.redo();
-        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
+        postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({
           type: "ERROR",
