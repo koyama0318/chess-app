@@ -6,6 +6,7 @@
       "dependencies": {
         "react": "^19",
         "react-dom": "^19",
+        "stockfish": "^18.0.5",
       },
       "devDependencies": {
         "@eslint/js": "^9",
@@ -638,6 +639,8 @@
     "stackback": ["stackback@0.0.2", "", {}, "sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw=="],
 
     "std-env": ["std-env@4.0.0", "", {}, "sha512-zUMPtQ/HBY3/50VbpkupYHbRroTRZJPRLvreamgErJVys0ceuzMkD44J/QjqhHjOzK42GQ3QZIeFG1OYfOtKqQ=="],
+
+    "stockfish": ["stockfish@18.0.5", "", { "bin": { "stockfish": "scripts/cli.js" } }, "sha512-2A8mrlrYT8ovf4y8GIrmzOQZCC2kf01hPeM4xrVZdBeFC/LoZj+MgYLyrwdKXDQWubx1RCiKU9dFDGeDutuT3A=="],
 
     "strip-indent": ["strip-indent@3.0.0", "", { "dependencies": { "min-indent": "^1.0.0" } }, "sha512-laJTa3Jb+VQpaC6DseHhF7dXVqHTfJPCRDaEbid/drOhgitgYku/letMUqOXFoWV0zIIUbjpdH2t+tYj4bQMRQ=="],
 

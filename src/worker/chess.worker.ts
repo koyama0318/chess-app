@@ -5,6 +5,7 @@ type WasmModule = typeof import("../../wasm-pkg/chess_wasm");
 type ChessGameInstance = InstanceType<WasmModule["ChessGame"]>;
 
 let game: ChessGameInstance | null = null;
+let stockfish: Worker | null = null;
 
 function postResponse(response: WorkerResponse): void {
   postMessage(response);
@@ -23,6 +24,33 @@ async function initWasm(fenSnapshot?: string | null): Promise<void> {
   } else {
     game = new mod.ChessGame();
   }
+}
+
+function sendUCI(command: string): void {
+  if (!stockfish) throw new Error("Stockfish not initialized");
+  stockfish.postMessage(command);
+}
+
+function onStockfishMessage(handler: (line: string) => void): void {
+  if (!stockfish) throw new Error("Stockfish not initialized");
+  stockfish.onmessage = (e: MessageEvent<string>) => handler(e.data);
+}
+
+async function initStockfish(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    stockfish = new Worker("/stockfish-18-lite-single.js");
+    stockfish.onerror = (e) => reject(e);
+
+    onStockfishMessage((line) => {
+      if (line === "uciok") {
+        sendUCI("isready");
+      } else if (line === "readyok") {
+        resolve();
+      }
+    });
+
+    sendUCI("uci");
+  });
 }
 
 export async function handleMessage(
@@ -104,6 +132,18 @@ export async function handleMessage(
         localStorage.removeItem("chess_events");
         localStorage.removeItem("chess_snapshot");
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
+      } catch (e) {
+        postResponse({
+          type: "ERROR",
+          payload: { message: String(e) },
+        });
+      }
+      break;
+    }
+    case "INIT_ENGINE": {
+      try {
+        await initStockfish();
+        postResponse({ type: "ENGINE_READY" });
       } catch (e) {
         postResponse({
           type: "ERROR",

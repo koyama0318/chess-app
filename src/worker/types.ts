@@ -6,8 +6,10 @@ export type WorkerRequest =
   | { type: "APPLY_MOVE"; payload: { uciMove: string } }
   | { type: "UNDO" }
   | { type: "REDO" }
-  | { type: "RESET" };
+  | { type: "RESET" }
+  | { type: "INIT_ENGINE" };
 
 export type WorkerResponse =
   | { type: "STATE_UPDATE"; payload: RenderState }
-  | { type: "ERROR"; payload: { message: string } };
+  | { type: "ERROR"; payload: { message: string } }
+  | { type: "ENGINE_READY" };
