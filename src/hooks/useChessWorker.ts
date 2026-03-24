@@ -8,12 +8,13 @@ export type InitState = "uninit" | "initializing" | "ready" | "error";
 interface State {
   initState: InitState;
   renderState: RenderState | null;
+  lastError: string | null;
 }
 
 type Action =
   | { type: "START_INIT" }
   | { type: "READY" }
-  | { type: "ERROR" }
+  | { type: "ERROR"; message: string }
   | { type: "STATE_UPDATE"; payload: RenderState };
 
 function reducer(state: State, action: Action): State {
@@ -25,8 +26,11 @@ function reducer(state: State, action: Action): State {
       if (state.initState !== "initializing") return state;
       return { ...state, initState: "ready" };
     case "ERROR":
-      if (state.initState !== "initializing") return state;
-      return { ...state, initState: "error" };
+      if (state.initState === "initializing") {
+        return { ...state, initState: "error", lastError: action.message };
+      }
+      // Post-init errors (APPLY_MOVE, UNDO, REDO): store message without state change
+      return { ...state, lastError: action.message };
     case "STATE_UPDATE":
       return { ...state, renderState: action.payload };
     default:
@@ -37,11 +41,13 @@ function reducer(state: State, action: Action): State {
 const initialState: State = {
   initState: "uninit",
   renderState: null,
+  lastError: null,
 };
 
 export interface UseChessWorkerReturn {
   initState: InitState;
   renderState: RenderState | null;
+  lastError: string | null;
   sendMove: (uciMove: string) => void;
   sendUndo: () => void;
   sendRedo: () => void;
@@ -65,7 +71,7 @@ export function useChessWorker(): UseChessWorkerReturn {
           dispatch({ type: "STATE_UPDATE", payload: msg.payload });
           break;
         case "ERROR":
-          dispatch({ type: "ERROR" });
+          dispatch({ type: "ERROR", message: msg.payload.message });
           break;
       }
     };
@@ -97,6 +103,7 @@ export function useChessWorker(): UseChessWorkerReturn {
   return {
     initState: state.initState,
     renderState: state.renderState,
+    lastError: state.lastError,
     sendMove,
     sendUndo,
     sendRedo,

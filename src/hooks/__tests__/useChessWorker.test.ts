@@ -42,6 +42,7 @@ describe("useChessWorker", () => {
     // and sent INIT
     expect(result.current.initState).toBe("initializing");
     expect(result.current.renderState).toBeNull();
+    expect(result.current.lastError).toBeNull();
   });
 
   it("sends INIT message on mount", () => {
@@ -73,6 +74,28 @@ describe("useChessWorker", () => {
     });
 
     expect(result.current.initState).toBe("error");
+    expect(result.current.lastError).toBe("init failed");
+  });
+
+  it("stores lastError on post-init ERROR without changing initState", () => {
+    const { result } = renderHook(() => useChessWorker());
+
+    act(() => {
+      workerInstance.onmessage?.(
+        new MessageEvent("message", { data: { type: "READY" } })
+      );
+    });
+
+    act(() => {
+      workerInstance.onmessage?.(
+        new MessageEvent("message", {
+          data: { type: "ERROR", payload: { message: "not implemented" } },
+        })
+      );
+    });
+
+    expect(result.current.initState).toBe("ready");
+    expect(result.current.lastError).toBe("not implemented");
   });
 
   it("updates renderState on STATE_UPDATE message", () => {
