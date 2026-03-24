@@ -95,4 +95,11 @@ mod tests {
         let result = get_legal_moves_core("");
         assert!(result.is_err(), "empty FEN should return error");
     }
+
+    // Stalemate: side to move has no legal moves but is not in check
+    #[test]
+    fn test_stalemate_returns_empty() {
+        let moves = sorted_moves("k7/8/KQ6/8/8/8/8/8 b - - 0 1");
+        assert!(moves.is_empty(), "stalemate should have no legal moves");
+    }
 }
