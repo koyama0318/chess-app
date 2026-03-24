@@ -7,6 +7,7 @@ import { GameStatus } from "./components/GameStatus";
 import { FlipButton } from "./components/FlipButton";
 import { GameOverModal } from "./components/GameOverModal";
 import { ResetButton } from "./components/ResetButton";
+import { ShareButton } from "./components/ShareButton";
 import { getFenTurn } from "./utils/fen";
 import { loadMoveEvents } from "./utils/storage";
 import type { GameMode, AppPhase } from "./types/game";
@@ -31,9 +32,15 @@ function ErrorMessage({ message }: { message: string }) {
   );
 }
 
-function ChessApp({ gameMode: _gameMode }: { gameMode: GameMode | null }) {
+function ChessApp({
+  gameMode: _gameMode,
+  initialFen,
+}: {
+  gameMode: GameMode | null;
+  initialFen?: string;
+}) {
   const { initState, renderState, sendMove, sendUndo, sendRedo, resetGame } =
-    useChessWorker();
+    useChessWorker(initialFen);
   const [flipped, setFlipped] = useState(false);
 
   switch (initState) {
@@ -88,6 +95,7 @@ function ChessApp({ gameMode: _gameMode }: { gameMode: GameMode | null }) {
               Redo
             </button>
             <ResetButton onClick={resetGame} />
+            <ShareButton currentFen={renderState.fen} />
           </div>
         </div>
       );
@@ -95,17 +103,24 @@ function ChessApp({ gameMode: _gameMode }: { gameMode: GameMode | null }) {
 }
 
 export function App() {
+  const urlFen =
+    new URLSearchParams(window.location.search).get("fen") ?? undefined;
   const [phase, setPhase] = useState<AppPhase>("mode-select");
   const [gameMode, setGameMode] = useState<GameMode | null>(null);
 
-  // Skip mode-select if localStorage has saved moves
+  // Skip mode-select if URL has ?fen= or localStorage has saved moves
   useEffect(() => {
+    if (urlFen) {
+      setGameMode("human-vs-human");
+      setPhase("playing");
+      return;
+    }
     const savedMoves = loadMoveEvents();
     if (savedMoves.length > 0) {
       setGameMode("human-vs-human");
       setPhase("playing");
     }
-  }, []);
+  }, [urlFen]);
 
   const handleSelectMode = (mode: GameMode) => {
     setGameMode(mode);
@@ -123,7 +138,7 @@ export function App() {
         <ErrorMessage message="Something went wrong initializing the chess engine." />
       }
     >
-      <ChessApp gameMode={gameMode} />
+      <ChessApp gameMode={gameMode} initialFen={urlFen} />
     </WasmErrorBoundary>
   );
 }

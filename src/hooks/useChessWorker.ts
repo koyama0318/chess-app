@@ -63,7 +63,7 @@ export interface UseChessWorkerReturn {
   resetGame: () => void;
 }
 
-export function useChessWorker(): UseChessWorkerReturn {
+export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
   const [state, dispatch] = useReducer(reducer, initialState);
   const workerRef = useRef<InstanceType<typeof ChessWorker> | null>(null);
   const moveCountRef = useRef(0);
@@ -91,15 +91,19 @@ export function useChessWorker(): UseChessWorkerReturn {
 
     dispatch({ type: "START_INIT" });
 
-    const { fenSnapshot, uciMoves } = loadGameState();
-    if (fenSnapshot !== null || uciMoves.length > 0) {
-      moveCountRef.current = uciMoves.length;
-      worker.postMessage({
-        type: "INIT_FROM_EVENTS",
-        payload: { fenSnapshot, uciMoves },
-      });
+    if (initialFen) {
+      worker.postMessage({ type: "INIT_FROM_FEN", payload: { fen: initialFen } });
     } else {
-      worker.postMessage({ type: "INIT" });
+      const { fenSnapshot, uciMoves } = loadGameState();
+      if (fenSnapshot !== null || uciMoves.length > 0) {
+        moveCountRef.current = uciMoves.length;
+        worker.postMessage({
+          type: "INIT_FROM_EVENTS",
+          payload: { fenSnapshot, uciMoves },
+        });
+      } else {
+        worker.postMessage({ type: "INIT" });
+      }
     }
 
     return () => {
