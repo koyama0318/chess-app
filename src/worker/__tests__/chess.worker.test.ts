@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { WorkerRequest, WorkerResponse } from "../types";
+import type { WorkerResponse } from "../types";
 import { GameStatus } from "../../types/chess";
 
 // Mock self.postMessage

@@ -1,0 +1,11 @@
+/assets/*.wasm
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
