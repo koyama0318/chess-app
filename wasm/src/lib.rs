@@ -1,3 +1,5 @@
+use shakmaty::fen::Fen;
+use shakmaty::{CastlingMode, Chess, EnPassantMode, Position};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -5,9 +7,27 @@ pub fn greet() -> String {
     "hello world from wasm".to_string()
 }
 
-// --- Chess Game ---
+// --- Legal Move Generation ---
 
-use shakmaty::{fen::Fen, Chess, EnPassantMode, Position};
+fn get_legal_moves_core(fen: &str) -> Result<Vec<String>, String> {
+    let fen: Fen = fen.parse().map_err(|e| format!("invalid FEN: {}", e))?;
+    let pos: Chess = fen
+        .into_position(CastlingMode::Standard)
+        .map_err(|e| format!("illegal position: {}", e))?;
+    let legal_moves = pos.legal_moves();
+    let uci_moves: Vec<String> = legal_moves
+        .iter()
+        .map(|m| m.to_uci(CastlingMode::Standard).to_string())
+        .collect();
+    Ok(uci_moves)
+}
+
+#[wasm_bindgen]
+pub fn get_legal_moves(fen: &str) -> Result<Vec<String>, JsValue> {
+    get_legal_moves_core(fen).map_err(|e| JsValue::from_str(&e))
+}
+
+// --- Chess Game ---
 
 #[wasm_bindgen]
 #[repr(u8)]
@@ -27,7 +47,6 @@ pub struct ChessGame {
 }
 
 impl ChessGame {
-    /// Core apply_move returning Result<(), String> for testability outside wasm.
     fn apply_move_inner(&mut self, uci_move: &str) -> Result<(), String> {
         let pos = self.history.last().expect("history must never be empty");
 
@@ -119,7 +138,72 @@ impl ChessGame {
 mod tests {
     use super::*;
 
-    // Helper to apply moves in tests (uses inner method to avoid JsValue)
+    // --- get_legal_moves tests ---
+
+    fn sorted_moves(fen: &str) -> Vec<String> {
+        let mut moves = get_legal_moves_core(fen).unwrap();
+        moves.sort();
+        moves
+    }
+
+    #[test]
+    fn test_starting_position_has_20_moves() {
+        let moves = sorted_moves("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        assert_eq!(moves.len(), 20);
+        assert!(moves.contains(&"e2e4".to_string()));
+        assert!(moves.contains(&"e2e3".to_string()));
+        assert!(moves.contains(&"g1f3".to_string()));
+        assert!(moves.contains(&"b1c3".to_string()));
+    }
+
+    #[test]
+    fn test_castling_moves() {
+        let moves = sorted_moves("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
+        assert!(moves.contains(&"e1g1".to_string()), "kingside castling missing");
+        assert!(moves.contains(&"e1c1".to_string()), "queenside castling missing");
+    }
+
+    #[test]
+    fn test_en_passant() {
+        let moves = sorted_moves("rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3");
+        assert!(moves.contains(&"e5d6".to_string()), "en passant capture missing");
+    }
+
+    #[test]
+    fn test_pawn_promotion() {
+        let moves = sorted_moves("k7/4P3/8/8/8/8/8/4K3 w - - 0 1");
+        assert!(moves.contains(&"e7e8q".to_string()), "queen promotion missing");
+        assert!(moves.contains(&"e7e8r".to_string()), "rook promotion missing");
+        assert!(moves.contains(&"e7e8b".to_string()), "bishop promotion missing");
+        assert!(moves.contains(&"e7e8n".to_string()), "knight promotion missing");
+    }
+
+    #[test]
+    fn test_checkmate_returns_empty() {
+        let moves = sorted_moves("rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3");
+        assert!(moves.is_empty(), "checkmate should have no legal moves");
+    }
+
+    #[test]
+    fn test_invalid_fen_returns_error() {
+        let result = get_legal_moves_core("not a valid fen");
+        assert!(result.is_err(), "invalid FEN should return error");
+    }
+
+    #[test]
+    fn test_empty_fen_returns_error() {
+        let result = get_legal_moves_core("");
+        assert!(result.is_err(), "empty FEN should return error");
+    }
+
+    #[test]
+    fn test_stalemate_returns_empty() {
+        let moves = sorted_moves("k7/8/KQ6/8/8/8/8/8 b - - 0 1");
+        assert!(moves.is_empty(), "stalemate should have no legal moves");
+    }
+
+    // --- ChessGame tests ---
+
     fn apply(game: &mut ChessGame, uci: &str) {
         game.apply_move_inner(uci).unwrap();
     }
@@ -127,8 +211,6 @@ mod tests {
     fn try_apply(game: &mut ChessGame, uci: &str) -> Result<(), String> {
         game.apply_move_inner(uci)
     }
-
-    // --- new() ---
 
     #[test]
     fn new_initializes_starting_position() {
@@ -144,8 +226,6 @@ mod tests {
         let game = ChessGame::new();
         assert_eq!(game.game_status(), GameStatus::InProgress);
     }
-
-    // --- apply_move ---
 
     #[test]
     fn apply_move_valid_advances_position() {
@@ -186,8 +266,6 @@ mod tests {
         assert!(!game.can_redo());
     }
 
-    // --- undo ---
-
     #[test]
     fn undo_reverts_to_previous_position() {
         let mut game = ChessGame::new();
@@ -219,8 +297,6 @@ mod tests {
         let _ = game.undo();
         let _ = game.undo();
     }
-
-    // --- redo ---
 
     #[test]
     fn redo_reapplies_undone_move() {
@@ -258,11 +334,8 @@ mod tests {
         let _ = game.redo();
     }
 
-    // --- game_status ---
-
     #[test]
     fn game_status_checkmate() {
-        // Scholar's mate: 1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7#
         let mut game = ChessGame::new();
         apply(&mut game, "e2e4");
         apply(&mut game, "e7e5");
@@ -276,7 +349,6 @@ mod tests {
 
     #[test]
     fn game_status_stalemate() {
-        // Black king on a8, White king on a6, White queen on b6 - king has no moves, not in check
         let fen: Fen = "k7/8/KQ6/8/8/8/8/8 b - - 0 1".parse().unwrap();
         let pos: Chess = fen
             .into_position(shakmaty::CastlingMode::Standard)
@@ -290,7 +362,6 @@ mod tests {
 
     #[test]
     fn game_status_check() {
-        // White rook on e1 gives check to black king on e8
         let fen: Fen = "4k3/8/8/8/8/8/8/4RK2 b - - 0 1".parse().unwrap();
         let pos: Chess = fen
             .into_position(shakmaty::CastlingMode::Standard)
@@ -307,8 +378,6 @@ mod tests {
         let game = ChessGame::new();
         assert_eq!(game.game_status(), GameStatus::InProgress);
     }
-
-    // --- can_undo / can_redo ---
 
     #[test]
     fn can_undo_false_at_start() {
