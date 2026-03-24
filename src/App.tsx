@@ -5,6 +5,7 @@ import { Board } from "./components/Board";
 import { GameStatus } from "./components/GameStatus";
 import { FlipButton } from "./components/FlipButton";
 import { GameOverModal } from "./components/GameOverModal";
+import { ResetButton } from "./components/ResetButton";
 import { getFenTurn } from "./utils/fen";
 
 function LoadingIndicator() {
@@ -28,7 +29,7 @@ function ErrorMessage({ message }: { message: string }) {
 }
 
 function ChessApp() {
-  const { initState, renderState, sendMove, sendUndo, sendRedo, sendReset } =
+  const { initState, renderState, sendMove, sendUndo, sendRedo, resetGame } =
     useChessWorker();
   const [flipped, setFlipped] = useState(false);
 
@@ -59,7 +60,7 @@ function ChessApp() {
           <GameOverModal
             status={renderState.status}
             currentTurn={renderState.currentTurn}
-            onRematch={sendReset}
+            onRematch={resetGame}
           />
           <Board
             renderState={renderState}
@@ -82,6 +83,7 @@ function ChessApp() {
             >
               Redo
             </button>
+            <ResetButton onClick={resetGame} />
           </div>
         </div>
       );
