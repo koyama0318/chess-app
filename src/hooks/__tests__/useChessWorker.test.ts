@@ -116,10 +116,13 @@ describe("useChessWorker", () => {
             type: "STATE_UPDATE",
             payload: {
               fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+              board: { e1: "K" },
               legalMoves: ["e2e4"],
               status: 0,
+              isCheck: false,
               canUndo: false,
               canRedo: false,
+              currentTurn: "white" as const,
             },
           },
         })
@@ -128,10 +131,13 @@ describe("useChessWorker", () => {
 
     expect(result.current.renderState).toEqual({
       fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      board: { e1: "K" },
       legalMoves: ["e2e4"],
       status: 0,
+      isCheck: false,
       canUndo: false,
       canRedo: false,
+      currentTurn: "white",
     });
   });
 

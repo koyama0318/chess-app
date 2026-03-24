@@ -41,10 +41,13 @@ describe("WorkerResponse discriminated union", () => {
       type: "STATE_UPDATE",
       payload: {
         fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+        board: { e4: "P" },
         legalMoves: ["e7e5"],
         status: GameStatus.InProgress,
+        isCheck: false,
         canUndo: true,
         canRedo: false,
+        currentTurn: "black" as const,
       },
     };
     expect(resp.type).toBe("STATE_UPDATE");
