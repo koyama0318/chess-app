@@ -1,8 +1,17 @@
-type ResetButtonProps = { onClick: () => void };
+export function ResetButton({ onClick }: { onClick: () => void }) {
+  const handleClick = () => {
+    if (window.confirm("Start a new game? Current game will be lost.")) {
+      onClick();
+    }
+  };
 
-export function ResetButton({ onClick }: ResetButtonProps) {
   return (
-    <button onClick={onClick} type="button">
+    <button
+      onClick={handleClick}
+      type="button"
+      aria-label="Start a new game (current game will be lost)"
+      style={{ marginLeft: "8px" }}
+    >
       New Game
     </button>
   );

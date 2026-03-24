@@ -1,9 +1,15 @@
 const STORAGE_KEY = "chess_move_events";
 
 export function saveMoveEvent(uciMove: string): void {
-  const events = loadMoveEvents();
-  events.push(uciMove);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const events = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(events)) return;
+    events.push(uciMove);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+  } catch {
+    // Corrupt storage — don't overwrite, just skip
+  }
 }
 
 export function loadMoveEvents(): string[] {
