@@ -147,6 +147,19 @@ impl ChessGame {
         }
     }
 
+    pub fn new_from_fen(fen_str: &str) -> Result<ChessGame, JsValue> {
+        let fen: Fen = fen_str
+            .parse()
+            .map_err(|e| JsValue::from_str(&format!("invalid FEN: {}", e)))?;
+        let pos: Chess = fen
+            .into_position(CastlingMode::Standard)
+            .map_err(|e| JsValue::from_str(&format!("illegal position: {}", e)))?;
+        Ok(ChessGame {
+            history: vec![pos],
+            redo_stack: Vec::new(),
+        })
+    }
+
     pub fn current_fen(&self) -> String {
         Fen::from_position(self.current_pos().clone(), EnPassantMode::Legal).to_string()
     }
