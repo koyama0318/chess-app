@@ -1,3 +1,4 @@
+import React from "react";
 import type { PieceCode, Square as SquareType } from "../utils/fen";
 import { Piece } from "./Piece";
 
@@ -7,6 +8,7 @@ interface SquareProps {
   isSelected: boolean;
   isLegalTarget: boolean;
   onClick: (square: SquareType) => void;
+  onPointerDown?: (event: React.PointerEvent<HTMLElement>, square: SquareType) => void;
 }
 
 export function Square({
@@ -15,6 +17,7 @@ export function Square({
   isSelected,
   isLegalTarget,
   onClick,
+  onPointerDown,
 }: SquareProps) {
   const file = square.charCodeAt(0) - "a".charCodeAt(0); // 0-7
   const rank = parseInt(square[1], 10) - 1; // 0-7
@@ -27,6 +30,7 @@ export function Square({
   return (
     <div
       onClick={() => onClick(square)}
+      onPointerDown={onPointerDown ? (e) => onPointerDown(e as React.PointerEvent<HTMLElement>, square) : undefined}
       style={{
         width: "12.5%",
         paddingBottom: "12.5%",

@@ -1,8 +1,10 @@
 import type { RenderState } from "../types/chess";
 import { parseFen } from "../utils/fen";
 import { useBoardInteraction } from "../hooks/useBoardInteraction";
+import { useDragDrop } from "../hooks/useDragDrop";
 import { Square } from "./Square";
 import { PromotionDialog } from "./PromotionDialog";
+import { Piece } from "./Piece";
 
 interface BoardProps {
   renderState: RenderState;
@@ -23,6 +25,9 @@ export function Board({ renderState, onMove, flipped }: BoardProps) {
     handlePromotionCancel,
   } = useBoardInteraction(renderState, onMove);
 
+  const { dragState, handlePointerDown, handlePointerMove, handlePointerUp } =
+    useDragDrop(renderState, onMove);
+
   const pieceMap = parseFen(renderState.fen);
 
   const ranks = flipped ? [...RANKS].reverse() : RANKS;
@@ -38,8 +43,12 @@ export function Board({ renderState, onMove, flipped }: BoardProps) {
           aspectRatio: "1",
           border: "2px solid #333",
           boxSizing: "border-box",
+          position: "relative",
+          touchAction: "none",
         }}
         aria-label="Chess board"
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
       >
         {ranks.map((rank) => (
           <div
@@ -48,19 +57,35 @@ export function Board({ renderState, onMove, flipped }: BoardProps) {
           >
             {files.map((file) => {
               const sq = `${file}${rank}`;
+              const isDragging = dragState.isDragging && dragState.draggedFrom === sq;
               return (
                 <Square
                   key={sq}
                   square={sq}
-                  piece={pieceMap.get(sq) ?? null}
+                  piece={isDragging ? null : (pieceMap.get(sq) ?? null)}
                   isSelected={selectedSquare === sq}
                   isLegalTarget={legalTargets.includes(sq)}
                   onClick={handleSquareClick}
+                  onPointerDown={handlePointerDown}
                 />
               );
             })}
           </div>
         ))}
+        {dragState.isDragging && dragState.draggedPiece && (
+          <div
+            style={{
+              position: "fixed",
+              left: dragState.dragX,
+              top: dragState.dragY,
+              transform: "translate(-50%, -50%)",
+              pointerEvents: "none",
+              zIndex: 1000,
+            }}
+          >
+            <Piece code={dragState.draggedPiece} />
+          </div>
+        )}
       </div>
       <PromotionDialog
         isOpen={pendingPromotion !== null}
