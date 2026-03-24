@@ -121,6 +121,7 @@ export function useChessWorker(): UseChessWorkerReturn {
     workerRef.current?.postMessage({ type: "INIT" });
   }, []);
 
+
   return {
     initState: state.initState,
     renderState: state.renderState,

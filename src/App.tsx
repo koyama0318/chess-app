@@ -4,6 +4,7 @@ import { WasmErrorBoundary } from "./components/WasmErrorBoundary";
 import { Board } from "./components/Board";
 import { GameStatus } from "./components/GameStatus";
 import { FlipButton } from "./components/FlipButton";
+import { GameOverModal } from "./components/GameOverModal";
 import { ResetButton } from "./components/ResetButton";
 import { getFenTurn } from "./utils/fen";
 
@@ -55,6 +56,11 @@ function ChessApp() {
           <GameStatus
             status={renderState.status}
             currentTurn={getFenTurn(renderState.fen)}
+          />
+          <GameOverModal
+            status={renderState.status}
+            currentTurn={renderState.currentTurn}
+            onRematch={resetGame}
           />
           <Board
             renderState={renderState}
