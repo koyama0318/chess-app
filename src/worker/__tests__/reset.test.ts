@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { WorkerRequest, WorkerResponse } from "../types";
+import type { WorkerRequest } from "../types";
 import { GameStatus } from "../../types/chess";
 
 const STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";

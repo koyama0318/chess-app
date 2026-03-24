@@ -9,10 +9,13 @@ const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 function makeRenderState(overrides?: Partial<RenderState>): RenderState {
   return {
     fen: START_FEN,
+    board: {},
     legalMoves: ["e2e4", "e2e3", "d2d4", "d2d3", "a2a3", "a2a4"],
     status: GameStatus.InProgress,
+    isCheck: false,
     canUndo: false,
     canRedo: false,
+    currentTurn: "white",
     ...overrides,
   };
 }

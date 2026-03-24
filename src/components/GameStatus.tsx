@@ -3,20 +3,20 @@ import { GameStatus as GameStatusEnum } from "../types/chess";
 interface GameStatusProps {
   status: GameStatusEnum;
   currentTurn: "white" | "black";
+  isCheck: boolean;
 }
 
-export function GameStatus({ status, currentTurn }: GameStatusProps) {
+export function GameStatus({ status, currentTurn, isCheck }: GameStatusProps) {
   if (status === GameStatusEnum.InProgress) {
+    const label = currentTurn === "white" ? "White" : "Black";
     return (
       <p style={{ margin: "8px 0", fontWeight: "bold" }}>
-        {currentTurn === "white" ? "White" : "Black"} to move
+        {isCheck ? `${label} is in check` : `${label} to move`}
       </p>
     );
   }
 
-  const messages: Record<GameStatusEnum, string> = {
-    [GameStatusEnum.InProgress]: "",
-    [GameStatusEnum.Check]: `${currentTurn === "white" ? "White" : "Black"} is in check`,
+  const messages: Partial<Record<GameStatusEnum, string>> = {
     [GameStatusEnum.Checkmate]: `Checkmate — ${currentTurn === "white" ? "Black" : "White"} wins!`,
     [GameStatusEnum.Stalemate]: "Stalemate — Draw!",
     [GameStatusEnum.Draw]: "Draw!",

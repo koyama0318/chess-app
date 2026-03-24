@@ -215,11 +215,7 @@ describe("useChessWorker", () => {
       const spy = vi.spyOn(storage, "saveMoveEvent").mockImplementation(() => {});
       const { result } = renderHook(() => useChessWorker());
 
-      act(() => {
-        workerInstance.onmessage?.(
-          new MessageEvent("message", { data: { type: "READY" } })
-        );
-      });
+      act(() => { sendStateUpdate(); });
 
       act(() => {
         result.current.sendMove("e2e4");
@@ -232,11 +228,7 @@ describe("useChessWorker", () => {
       const clearSpy = vi.spyOn(storage, "clearMoveEvents").mockImplementation(() => {});
       const { result } = renderHook(() => useChessWorker());
 
-      act(() => {
-        workerInstance.onmessage?.(
-          new MessageEvent("message", { data: { type: "READY" } })
-        );
-      });
+      act(() => { sendStateUpdate(); });
 
       workerInstance.postMessage.mockClear();
 

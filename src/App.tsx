@@ -55,6 +55,7 @@ function ChessApp() {
           <GameStatus
             status={renderState.status}
             currentTurn={getFenTurn(renderState.fen)}
+            isCheck={renderState.isCheck}
           />
           <Board
             renderState={renderState}
