@@ -4,6 +4,7 @@ import { WasmErrorBoundary } from "./components/WasmErrorBoundary";
 import { Board } from "./components/Board";
 import { GameStatus } from "./components/GameStatus";
 import { FlipButton } from "./components/FlipButton";
+import { GameOverModal } from "./components/GameOverModal";
 import { getFenTurn } from "./utils/fen";
 
 function LoadingIndicator() {
@@ -27,7 +28,7 @@ function ErrorMessage({ message }: { message: string }) {
 }
 
 function ChessApp() {
-  const { initState, renderState, sendMove, sendUndo, sendRedo } =
+  const { initState, renderState, sendMove, sendUndo, sendRedo, sendReset } =
     useChessWorker();
   const [flipped, setFlipped] = useState(false);
 
@@ -54,6 +55,11 @@ function ChessApp() {
           <GameStatus
             status={renderState.status}
             currentTurn={getFenTurn(renderState.fen)}
+          />
+          <GameOverModal
+            status={renderState.status}
+            currentTurn={renderState.currentTurn}
+            onRematch={sendReset}
           />
           <Board
             renderState={renderState}

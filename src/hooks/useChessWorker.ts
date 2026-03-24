@@ -50,6 +50,7 @@ export interface UseChessWorkerReturn {
   sendMove: (uciMove: string) => void;
   sendUndo: () => void;
   sendRedo: () => void;
+  sendReset: () => void;
 }
 
 export function useChessWorker(): UseChessWorkerReturn {
@@ -96,6 +97,10 @@ export function useChessWorker(): UseChessWorkerReturn {
     workerRef.current?.postMessage({ type: "REDO" });
   }, []);
 
+  const sendReset = useCallback(() => {
+    workerRef.current?.postMessage({ type: "RESET" });
+  }, []);
+
   return {
     initState: state.initState,
     renderState: state.renderState,
@@ -103,5 +108,6 @@ export function useChessWorker(): UseChessWorkerReturn {
     sendMove,
     sendUndo,
     sendRedo,
+    sendReset,
   };
 }
