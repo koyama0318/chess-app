@@ -44,6 +44,24 @@ export async function handleMessage(
       }
       break;
     }
+    case "INIT_FROM_EVENTS": {
+      try {
+        const mod = await import("../../wasm-pkg/chess_wasm");
+        await mod.default();
+        wasm = mod;
+        game = new mod.ChessGame();
+        for (const move of data.payload.uciMoves) {
+          game.apply_move(move);
+        }
+        postResponse({ type: "STATE_UPDATE", payload: buildRenderState() });
+      } catch (e) {
+        postResponse({
+          type: "ERROR",
+          payload: { message: String(e) },
+        });
+      }
+      break;
+    }
     case "APPLY_MOVE": {
       try {
         if (!game) throw new Error("Not initialized");
