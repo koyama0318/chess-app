@@ -1,5 +1,4 @@
 import type { RenderState } from "../types/chess";
-import { parseFen } from "../utils/fen";
 import { useBoardInteraction } from "../hooks/useBoardInteraction";
 import { Square } from "./Square";
 
@@ -13,10 +12,8 @@ const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const RANKS = [8, 7, 6, 5, 4, 3, 2, 1];
 
 export function Board({ renderState, onMove, flipped }: BoardProps) {
-  const { selectedSquare, legalTargets, handleSquareClick } =
+  const { selectedSquare, legalTargets, pieceMap, handleSquareClick } =
     useBoardInteraction(renderState, onMove);
-
-  const pieceMap = parseFen(renderState.fen);
 
   const ranks = flipped ? [...RANKS].reverse() : RANKS;
   const files = flipped ? [...FILES].reverse() : FILES;

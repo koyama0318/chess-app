@@ -13,7 +13,6 @@ interface State {
 
 type Action =
   | { type: "START_INIT" }
-  | { type: "READY" }
   | { type: "ERROR"; message: string }
   | { type: "STATE_UPDATE"; payload: RenderState };
 
@@ -22,14 +21,10 @@ function reducer(state: State, action: Action): State {
     case "START_INIT":
       if (state.initState !== "uninit") return state;
       return { ...state, initState: "initializing" };
-    case "READY":
-      if (state.initState !== "initializing") return state;
-      return { ...state, initState: "ready" };
     case "ERROR":
       if (state.initState === "initializing") {
         return { ...state, initState: "error", lastError: action.message };
       }
-      // Post-init errors (APPLY_MOVE, UNDO, REDO): store message without state change
       return { ...state, lastError: action.message };
     case "STATE_UPDATE":
       if (state.initState === "initializing") {
@@ -67,9 +62,6 @@ export function useChessWorker(): UseChessWorkerReturn {
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
       const msg = event.data;
       switch (msg.type) {
-        case "READY":
-          dispatch({ type: "READY" });
-          break;
         case "STATE_UPDATE":
           dispatch({ type: "STATE_UPDATE", payload: msg.payload });
           break;

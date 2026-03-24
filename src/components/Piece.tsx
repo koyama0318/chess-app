@@ -28,7 +28,7 @@ export function Piece({ code }: PieceProps) {
         userSelect: "none",
         cursor: "pointer",
       }}
-      aria-label={code}
+      aria-hidden="true"
     >
       {PIECE_UNICODE[code] ?? code}
     </span>

@@ -27,6 +27,22 @@ vi.mock("../../worker/chess.worker?worker", () => {
   };
 });
 
+const STATE_UPDATE_PAYLOAD = {
+  fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  legalMoves: ["e2e4"],
+  status: 0,
+  canUndo: false,
+  canRedo: false,
+};
+
+function sendStateUpdate(payload = STATE_UPDATE_PAYLOAD) {
+  workerInstance.onmessage?.(
+    new MessageEvent("message", {
+      data: { type: "STATE_UPDATE", payload },
+    })
+  );
+}
+
 describe("useChessWorker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -36,10 +52,8 @@ describe("useChessWorker", () => {
     vi.restoreAllMocks();
   });
 
-  it("starts in uninit state", () => {
+  it("starts in initializing state after mount", () => {
     const { result } = renderHook(() => useChessWorker());
-    // After mount, it should have transitioned to initializing
-    // and sent INIT
     expect(result.current.initState).toBe("initializing");
     expect(result.current.renderState).toBeNull();
     expect(result.current.lastError).toBeNull();
@@ -50,16 +64,15 @@ describe("useChessWorker", () => {
     expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "INIT" });
   });
 
-  it("transitions to ready on READY message", () => {
+  it("transitions to ready on STATE_UPDATE during initializing", () => {
     const { result } = renderHook(() => useChessWorker());
 
     act(() => {
-      workerInstance.onmessage?.(
-        new MessageEvent("message", { data: { type: "READY" } })
-      );
+      sendStateUpdate();
     });
 
     expect(result.current.initState).toBe("ready");
+    expect(result.current.renderState).toEqual(STATE_UPDATE_PAYLOAD);
   });
 
   it("transitions to error on ERROR message during initializing", () => {
@@ -81,66 +94,41 @@ describe("useChessWorker", () => {
     const { result } = renderHook(() => useChessWorker());
 
     act(() => {
-      workerInstance.onmessage?.(
-        new MessageEvent("message", { data: { type: "READY" } })
-      );
+      sendStateUpdate();
     });
 
     act(() => {
       workerInstance.onmessage?.(
         new MessageEvent("message", {
-          data: { type: "ERROR", payload: { message: "not implemented" } },
+          data: { type: "ERROR", payload: { message: "illegal move" } },
         })
       );
     });
 
     expect(result.current.initState).toBe("ready");
-    expect(result.current.lastError).toBe("not implemented");
+    expect(result.current.lastError).toBe("illegal move");
   });
 
-  it("updates renderState on STATE_UPDATE message", () => {
+  it("updates renderState on subsequent STATE_UPDATE message", () => {
     const { result } = renderHook(() => useChessWorker());
 
-    // First become ready
     act(() => {
-      workerInstance.onmessage?.(
-        new MessageEvent("message", { data: { type: "READY" } })
-      );
+      sendStateUpdate();
     });
 
+    const updatedPayload = { ...STATE_UPDATE_PAYLOAD, canUndo: true };
     act(() => {
-      workerInstance.onmessage?.(
-        new MessageEvent("message", {
-          data: {
-            type: "STATE_UPDATE",
-            payload: {
-              fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-              legalMoves: ["e2e4"],
-              status: 0,
-              canUndo: false,
-              canRedo: false,
-            },
-          },
-        })
-      );
+      sendStateUpdate(updatedPayload);
     });
 
-    expect(result.current.renderState).toEqual({
-      fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-      legalMoves: ["e2e4"],
-      status: 0,
-      canUndo: false,
-      canRedo: false,
-    });
+    expect(result.current.renderState).toEqual(updatedPayload);
   });
 
   it("sendMove posts APPLY_MOVE to worker", () => {
     const { result } = renderHook(() => useChessWorker());
 
     act(() => {
-      workerInstance.onmessage?.(
-        new MessageEvent("message", { data: { type: "READY" } })
-      );
+      sendStateUpdate();
     });
 
     act(() => {
@@ -157,9 +145,7 @@ describe("useChessWorker", () => {
     const { result } = renderHook(() => useChessWorker());
 
     act(() => {
-      workerInstance.onmessage?.(
-        new MessageEvent("message", { data: { type: "READY" } })
-      );
+      sendStateUpdate();
     });
 
     act(() => {
@@ -173,9 +159,7 @@ describe("useChessWorker", () => {
     const { result } = renderHook(() => useChessWorker());
 
     act(() => {
-      workerInstance.onmessage?.(
-        new MessageEvent("message", { data: { type: "READY" } })
-      );
+      sendStateUpdate();
     });
 
     act(() => {

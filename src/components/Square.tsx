@@ -1,5 +1,21 @@
+import type { KeyboardEvent } from "react";
 import type { PieceCode, Square as SquareType } from "../utils/fen";
 import { Piece } from "./Piece";
+
+const PIECE_NAMES: Record<string, string> = {
+  K: "White King",
+  Q: "White Queen",
+  R: "White Rook",
+  B: "White Bishop",
+  N: "White Knight",
+  P: "White Pawn",
+  k: "Black King",
+  q: "Black Queen",
+  r: "Black Rook",
+  b: "Black Bishop",
+  n: "Black Knight",
+  p: "Black Pawn",
+};
 
 interface SquareProps {
   square: SquareType;
@@ -24,52 +40,68 @@ export function Square({
   if (isSelected) bg = "#f6f669";
   else if (isLegalTarget) bg = isLight ? "#cdd26a" : "#aaa23a";
 
+  const pieceName = piece ? PIECE_NAMES[piece] ?? piece : null;
+  const label = [
+    square,
+    pieceName,
+    isSelected ? "selected" : null,
+    isLegalTarget ? "legal move" : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick(square);
+    }
+  };
+
   return (
     <div
+      role="gridcell"
+      tabIndex={0}
       onClick={() => onClick(square)}
+      onKeyDown={handleKeyDown}
       style={{
-        width: "12.5%",
-        paddingBottom: "12.5%",
+        flex: 1,
         position: "relative",
         backgroundColor: bg,
         cursor: "pointer",
         boxSizing: "border-box",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        outline: "none",
       }}
       data-square={square}
-      aria-label={square}
+      aria-label={label}
+      aria-selected={isSelected}
     >
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {piece && <Piece code={piece} />}
-        {isLegalTarget && !piece && (
-          <div
-            style={{
-              width: "33%",
-              height: "33%",
-              borderRadius: "50%",
-              backgroundColor: "rgba(0,0,0,0.2)",
-            }}
-          />
-        )}
-        {isLegalTarget && piece && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              border: "4px solid rgba(0,0,0,0.3)",
-              borderRadius: "50%",
-              pointerEvents: "none",
-            }}
-          />
-        )}
-      </div>
+      {piece && <Piece code={piece} />}
+      {isLegalTarget && !piece && (
+        <div
+          aria-hidden="true"
+          style={{
+            width: "33%",
+            height: "33%",
+            borderRadius: "50%",
+            backgroundColor: "rgba(0,0,0,0.4)",
+          }}
+        />
+      )}
+      {isLegalTarget && piece && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            border: "4px solid rgba(0,0,0,0.4)",
+            borderRadius: "50%",
+            pointerEvents: "none",
+          }}
+        />
+      )}
     </div>
   );
 }

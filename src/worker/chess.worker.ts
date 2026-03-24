@@ -87,4 +87,6 @@ export async function handleMessage(
 }
 
 // Attach to self.onmessage when running as a Web Worker
-onmessage = handleMessage;
+onmessage = (event: MessageEvent<WorkerRequest>) => {
+  void handleMessage(event);
+};
