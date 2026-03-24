@@ -1,5 +1,6 @@
 import type { RenderState } from "../types/chess";
 import type { WorkerRequest, WorkerResponse } from "./types";
+import { clearMoveEvents } from "../utils/storage";
 
 type WasmModule = typeof import("../../wasm-pkg/chess_wasm");
 type ChessGameInstance = InstanceType<WasmModule["ChessGame"]>;
@@ -101,8 +102,7 @@ export async function handleMessage(
       try {
         if (!game) throw new Error("Game not initialized");
         game.reset();
-        localStorage.removeItem("chess_events");
-        localStorage.removeItem("chess_snapshot");
+        clearMoveEvents();
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({

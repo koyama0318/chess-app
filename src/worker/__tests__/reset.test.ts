@@ -85,8 +85,8 @@ describe("RESET message", () => {
     await handleMessage(new MessageEvent("message", { data: { type: "INIT" } }));
     await handleMessage(new MessageEvent("message", { data: { type: "RESET" } }));
 
-    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("chess_events");
-    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("chess_snapshot");
+    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("chess_move_events");
+    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("chess_fen_snapshot");
   });
 
   it("returns ERROR if RESET called before INIT", async () => {
