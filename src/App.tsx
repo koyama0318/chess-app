@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useReducer, useEffect } from "react";
 import { useChessWorker } from "./hooks/useChessWorker";
 import { WasmErrorBoundary } from "./components/WasmErrorBoundary";
 import { StartScreen } from "./components/StartScreen";
@@ -31,7 +31,7 @@ function ErrorMessage({ message }: { message: string }) {
   );
 }
 
-function ChessApp({ gameMode: _gameMode }: { gameMode: GameMode | null }) {
+function ChessApp() {
   const { initState, renderState, sendMove, sendUndo, sendRedo, resetGame } =
     useChessWorker();
   const [flipped, setFlipped] = useState(false);
@@ -78,7 +78,7 @@ function ChessApp({ gameMode: _gameMode }: { gameMode: GameMode | null }) {
             >
               Undo
             </button>
-            <FlipButton onClick={() => setFlipped((f) => !f)} />
+            <FlipButton onClick={() => setFlipped((f: boolean) => !f)} />
             <button
               onClick={sendRedo}
               disabled={!renderState.canRedo}
@@ -93,36 +93,57 @@ function ChessApp({ gameMode: _gameMode }: { gameMode: GameMode | null }) {
   }
 }
 
-export function App() {
-  const [phase, setPhase] = useState<AppPhase>("mode-select");
-  const [gameMode, setGameMode] = useState<GameMode | null>(null);
+interface AppState {
+  phase: AppPhase;
+  gameMode: GameMode;
+}
 
-  // Skip mode-select if localStorage has saved moves
+type AppAction =
+  | { type: "SELECT_MODE"; mode: GameMode }
+  | { type: "RESUME" };
+
+const initialAppState: AppState = {
+  phase: "mode-select",
+  gameMode: "human-vs-human",
+};
+
+function appReducer(state: AppState, action: AppAction): AppState {
+  switch (action.type) {
+    case "SELECT_MODE":
+      return { phase: "playing", gameMode: action.mode };
+    case "RESUME":
+      // Resume always uses human-vs-human since mode is not persisted yet
+      return { phase: "playing", gameMode: "human-vs-human" };
+    default:
+      return state;
+  }
+}
+
+export function App() {
+  const [state, dispatch] = useReducer(appReducer, initialAppState);
+
   useEffect(() => {
     const savedMoves = loadMoveEvents();
     if (savedMoves.length > 0) {
-      setGameMode("human-vs-human");
-      setPhase("playing");
+      dispatch({ type: "RESUME" });
     }
   }, []);
 
-  const handleSelectMode = (mode: GameMode) => {
-    setGameMode(mode);
-    setPhase("playing");
-  };
-
-  if (phase === "mode-select") {
-    return <StartScreen onSelectMode={handleSelectMode} />;
+  if (state.phase === "mode-select") {
+    return (
+      <StartScreen
+        onSelectMode={(mode) => dispatch({ type: "SELECT_MODE", mode })}
+      />
+    );
   }
 
-  // phase === "playing"
   return (
     <WasmErrorBoundary
       fallback={
         <ErrorMessage message="Something went wrong initializing the chess engine." />
       }
     >
-      <ChessApp gameMode={gameMode} />
+      <ChessApp />
     </WasmErrorBoundary>
   );
 }
