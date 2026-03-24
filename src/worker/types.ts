@@ -4,7 +4,8 @@ export type WorkerRequest =
   | { type: "INIT" }
   | { type: "APPLY_MOVE"; payload: { uciMove: string } }
   | { type: "UNDO" }
-  | { type: "REDO" };
+  | { type: "REDO" }
+  | { type: "RESET" };
 
 export type WorkerResponse =
   | { type: "READY" }

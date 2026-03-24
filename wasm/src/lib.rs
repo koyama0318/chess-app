@@ -196,6 +196,11 @@ impl ChessGame {
         !self.redo_stack.is_empty()
     }
 
+    pub fn reset(&mut self) {
+        self.history = vec![Chess::default()];
+        self.redo_stack.clear();
+    }
+
     pub fn render_state(&self) -> Result<JsValue, JsValue> {
         let pos = self.current_pos();
         let fen = Fen::from_position(pos.clone(), EnPassantMode::Legal).to_string();
@@ -545,5 +550,46 @@ mod tests {
         apply(&mut game, "e2e4");
         game.undo();
         assert!(game.can_redo());
+    }
+
+    #[test]
+    fn reset_returns_to_starting_position() {
+        let mut game = ChessGame::new();
+        apply(&mut game, "e2e4");
+        apply(&mut game, "e7e5");
+        game.reset();
+        assert_eq!(
+            game.current_fen(),
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        );
+    }
+
+    #[test]
+    fn reset_clears_undo_history() {
+        let mut game = ChessGame::new();
+        apply(&mut game, "e2e4");
+        assert!(game.can_undo());
+        game.reset();
+        assert!(!game.can_undo());
+    }
+
+    #[test]
+    fn reset_clears_redo_stack() {
+        let mut game = ChessGame::new();
+        apply(&mut game, "e2e4");
+        game.undo();
+        assert!(game.can_redo());
+        game.reset();
+        assert!(!game.can_redo());
+    }
+
+    #[test]
+    fn reset_on_fresh_game_is_idempotent() {
+        let mut game = ChessGame::new();
+        game.reset();
+        assert_eq!(
+            game.current_fen(),
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        );
     }
 }
