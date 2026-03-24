@@ -197,10 +197,7 @@ describe("useChessWorker", () => {
 
   describe("localStorage event sourcing", () => {
     it("sends INIT_FROM_EVENTS when localStorage has saved moves", () => {
-      vi.spyOn(storage, "loadGameState").mockReturnValue({
-        fenSnapshot: null,
-        uciMoves: ["e2e4", "e7e5"],
-      });
+      vi.spyOn(storage, "loadGameState").mockReturnValue({ fenSnapshot: null, uciMoves: ["e2e4", "e7e5"] });
       renderHook(() => useChessWorker());
       expect(workerInstance.postMessage).toHaveBeenCalledWith({
         type: "INIT_FROM_EVENTS",
@@ -209,10 +206,7 @@ describe("useChessWorker", () => {
     });
 
     it("sends INIT when localStorage is empty", () => {
-      vi.spyOn(storage, "loadGameState").mockReturnValue({
-        fenSnapshot: null,
-        uciMoves: [],
-      });
+      vi.spyOn(storage, "loadGameState").mockReturnValue({ fenSnapshot: null, uciMoves: [] });
       renderHook(() => useChessWorker());
       expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "INIT" });
     });

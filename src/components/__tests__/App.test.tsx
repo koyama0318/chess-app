@@ -18,20 +18,20 @@ vi.mock("../../worker/chess.worker?worker", () => {
 });
 
 // Mock storage module
+const mockLoadMoveEvents = vi.fn((): string[] => []);
+const mockLoadGameState = vi.fn(() => ({ fenSnapshot: null, uciMoves: [] as string[] }));
 vi.mock("../../utils/storage", () => ({
-  loadMoveEvents: vi.fn(() => []),
-  loadGameState: vi.fn(() => ({ fenSnapshot: null, uciMoves: [] })),
+  loadMoveEvents: () => mockLoadMoveEvents(),
+  loadGameState: () => mockLoadGameState(),
   saveMoveEvent: vi.fn(),
   saveSnapshot: vi.fn(),
   clearMoveEvents: vi.fn(),
   SNAPSHOT_INTERVAL: 20,
 }));
 
-import { loadMoveEvents, loadGameState } from "../../utils/storage";
-
 beforeEach(() => {
-  vi.mocked(loadMoveEvents).mockReturnValue([]);
-  vi.mocked(loadGameState).mockReturnValue({ fenSnapshot: null, uciMoves: [] });
+  mockLoadMoveEvents.mockReturnValue([]);
+  mockLoadGameState.mockReturnValue({ fenSnapshot: null, uciMoves: [] });
 });
 
 describe("App", () => {
@@ -56,8 +56,8 @@ describe("App", () => {
   });
 
   it("skips start screen when localStorage has saved moves", () => {
-    vi.mocked(loadMoveEvents).mockReturnValue(["e2e4", "e7e5"]);
-    vi.mocked(loadGameState).mockReturnValue({ fenSnapshot: null, uciMoves: ["e2e4", "e7e5"] });
+    mockLoadMoveEvents.mockReturnValue(["e2e4", "e7e5"]);
+    mockLoadGameState.mockReturnValue({ fenSnapshot: null, uciMoves: ["e2e4", "e7e5"] });
 
     render(<App />);
 
