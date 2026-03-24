@@ -191,4 +191,32 @@ describe("chess.worker message routing", () => {
       })
     );
   });
+
+  it("responds STATE_UPDATE to INIT_FROM_EVENTS with replayed moves", async () => {
+    await handleMessage(
+      new MessageEvent("message", {
+        data: { type: "INIT_FROM_EVENTS", payload: { uciMoves: ["e2e4"] } },
+      })
+    );
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "STATE_UPDATE",
+        payload: expect.objectContaining({
+          fen: AFTER_E2E4_FEN,
+          canUndo: true,
+        }),
+      })
+    );
+  });
+
+  it("responds ERROR to INIT_FROM_EVENTS with invalid move", async () => {
+    await handleMessage(
+      new MessageEvent("message", {
+        data: { type: "INIT_FROM_EVENTS", payload: { uciMoves: ["e2e4", "e2e9"] } },
+      })
+    );
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "ERROR" })
+    );
+  });
 });

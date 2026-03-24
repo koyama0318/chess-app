@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useChessWorker } from "../useChessWorker";
 import type { WorkerResponse } from "../../worker/types";
+import * as storage from "../../utils/storage";
 
 // Mock the Worker class
 let workerInstance: {
@@ -192,5 +193,64 @@ describe("useChessWorker", () => {
     const { unmount } = renderHook(() => useChessWorker());
     unmount();
     expect(workerInstance.terminate).toHaveBeenCalled();
+  });
+
+  describe("localStorage event sourcing", () => {
+    it("sends INIT_FROM_EVENTS when localStorage has saved moves", () => {
+      vi.spyOn(storage, "loadMoveEvents").mockReturnValue(["e2e4", "e7e5"]);
+      renderHook(() => useChessWorker());
+      expect(workerInstance.postMessage).toHaveBeenCalledWith({
+        type: "INIT_FROM_EVENTS",
+        payload: { uciMoves: ["e2e4", "e7e5"] },
+      });
+    });
+
+    it("sends INIT when localStorage is empty", () => {
+      vi.spyOn(storage, "loadMoveEvents").mockReturnValue([]);
+      renderHook(() => useChessWorker());
+      expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "INIT" });
+    });
+
+    it("sendMove calls saveMoveEvent", () => {
+      const spy = vi.spyOn(storage, "saveMoveEvent").mockImplementation(() => {});
+      const { result } = renderHook(() => useChessWorker());
+
+      act(() => { sendStateUpdate(); });
+
+      act(() => {
+        result.current.sendMove("e2e4");
+      });
+
+      expect(spy).toHaveBeenCalledWith("e2e4");
+    });
+
+    it("resetGame clears localStorage and sends INIT", () => {
+      const clearSpy = vi.spyOn(storage, "clearMoveEvents").mockImplementation(() => {});
+      const { result } = renderHook(() => useChessWorker());
+
+      act(() => { sendStateUpdate(); });
+
+      workerInstance.postMessage.mockClear();
+
+      act(() => {
+        result.current.resetGame();
+      });
+
+      expect(clearSpy).toHaveBeenCalled();
+      expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "INIT" });
+    });
+
+    it("resetGame sets initState back to initializing", () => {
+      const { result } = renderHook(() => useChessWorker());
+
+      act(() => { sendStateUpdate(); });
+      expect(result.current.initState).toBe("ready");
+
+      act(() => {
+        result.current.resetGame();
+      });
+
+      expect(result.current.initState).toBe("initializing");
+    });
   });
 });

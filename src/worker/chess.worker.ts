@@ -35,6 +35,23 @@ export async function handleMessage(
       }
       break;
     }
+    case "INIT_FROM_EVENTS": {
+      try {
+        const mod = await import("../../wasm-pkg/chess_wasm");
+        await mod.default();
+        game = new mod.ChessGame();
+        for (const move of data.payload.uciMoves) {
+          game.apply_move(move);
+        }
+        postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
+      } catch (e) {
+        postResponse({
+          type: "ERROR",
+          payload: { message: String(e) },
+        });
+      }
+      break;
+    }
     case "APPLY_MOVE": {
       try {
         if (!game) throw new Error("Game not initialized");
@@ -76,10 +93,9 @@ export async function handleMessage(
     }
     case "RESET": {
       try {
-        if (!game) throw new Error("Game not initialized");
-        game.reset();
-        localStorage.removeItem("chess_events");
-        localStorage.removeItem("chess_snapshot");
+        const mod = await import("../../wasm-pkg/chess_wasm");
+        await mod.default();
+        game = new mod.ChessGame();
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({

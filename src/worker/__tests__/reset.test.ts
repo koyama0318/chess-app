@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { WorkerRequest, WorkerResponse } from "../types";
+import type { WorkerRequest } from "../types";
 import { GameStatus } from "../../types/chess";
 
 const STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -19,7 +19,6 @@ class MockChessGame {
   }
   undo() { this.fen = STARTING_FEN; }
   redo() {}
-  reset() { this.fen = STARTING_FEN; }
   render_state() {
     return {
       fen: this.fen,
@@ -39,24 +38,22 @@ let mockGameInstance: MockChessGame;
 
 vi.mock("../../../wasm-pkg/chess_wasm", () => ({
   default: mockInitFn,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ChessGame: function (this: any) { return mockGameInstance; },
+  ChessGame: class {
+    constructor() {
+      mockGameInstance = new MockChessGame();
+      return mockGameInstance;
+    }
+  },
 }));
 
 const mockPostMessage = vi.fn();
 vi.stubGlobal("postMessage", mockPostMessage);
-
-const mockLocalStorage = {
-  removeItem: vi.fn(),
-};
-vi.stubGlobal("localStorage", mockLocalStorage);
 
 let handleMessage: (event: MessageEvent<WorkerRequest>) => Promise<void>;
 
 beforeEach(async () => {
   vi.resetModules();
   mockPostMessage.mockClear();
-  mockLocalStorage.removeItem.mockClear();
   mockInitFn.mockClear().mockResolvedValue(undefined);
   mockGameInstance = new MockChessGame();
   const mod = await import("../chess.worker");
@@ -81,19 +78,14 @@ describe("RESET message", () => {
     );
   });
 
-  it("clears localStorage on RESET", async () => {
-    await handleMessage(new MessageEvent("message", { data: { type: "INIT" } }));
-    await handleMessage(new MessageEvent("message", { data: { type: "RESET" } }));
-
-    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("chess_events");
-    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("chess_snapshot");
-  });
-
-  it("returns ERROR if RESET called before INIT", async () => {
+  it("RESET works even without prior INIT (re-initializes WASM)", async () => {
     await handleMessage(new MessageEvent("message", { data: { type: "RESET" } }));
 
     expect(mockPostMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "ERROR" })
+      expect.objectContaining({
+        type: "STATE_UPDATE",
+        payload: expect.objectContaining({ fen: STARTING_FEN }),
+      })
     );
   });
 });
