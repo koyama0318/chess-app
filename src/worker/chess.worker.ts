@@ -112,6 +112,20 @@ export async function handleMessage(
       }
       break;
     }
+    case "INIT_FROM_FEN": {
+      try {
+        const mod = await import("../../wasm-pkg/chess_wasm");
+        await mod.default();
+        game = mod.ChessGame.from_fen(data.payload.fen) as ChessGameInstance;
+        postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
+      } catch (e) {
+        postResponse({
+          type: "ERROR",
+          payload: { message: String(e) },
+        });
+      }
+      break;
+    }
   }
 }
 

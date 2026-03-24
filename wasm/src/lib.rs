@@ -147,7 +147,7 @@ impl ChessGame {
         }
     }
 
-    pub fn new_from_fen(fen_str: &str) -> Result<ChessGame, JsValue> {
+    pub fn from_fen(fen_str: &str) -> Result<ChessGame, JsValue> {
         let fen: Fen = fen_str
             .parse()
             .map_err(|e| JsValue::from_str(&format!("invalid FEN: {}", e)))?;
@@ -158,6 +158,10 @@ impl ChessGame {
             history: vec![pos],
             redo_stack: Vec::new(),
         })
+    }
+
+    pub fn new_from_fen(fen_str: &str) -> Result<ChessGame, JsValue> {
+        ChessGame::from_fen(fen_str)
     }
 
     pub fn current_fen(&self) -> String {
