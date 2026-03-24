@@ -4,6 +4,7 @@ import { WasmErrorBoundary } from "./components/WasmErrorBoundary";
 import { Board } from "./components/Board";
 import { GameStatus } from "./components/GameStatus";
 import { FlipButton } from "./components/FlipButton";
+import { ResetButton } from "./components/ResetButton";
 import { getFenTurn } from "./utils/fen";
 
 function LoadingIndicator() {
@@ -27,7 +28,7 @@ function ErrorMessage({ message }: { message: string }) {
 }
 
 function ChessApp() {
-  const { initState, renderState, sendMove, sendUndo, sendRedo } =
+  const { initState, renderState, sendMove, sendUndo, sendRedo, resetGame } =
     useChessWorker();
   const [flipped, setFlipped] = useState(false);
 
@@ -76,6 +77,7 @@ function ChessApp() {
             >
               Redo
             </button>
+            <ResetButton onClick={resetGame} />
           </div>
         </div>
       );
