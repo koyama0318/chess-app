@@ -28,25 +28,30 @@ export function useBoardInteraction(
   const handleSquareClick = useCallback(
     (square: Square) => {
       if (!renderState) return;
+      // Ignore board clicks while promotion dialog is open
+      if (pendingPromotion) return;
 
       const turn = getFenTurn(renderState.fen);
       const pieceMap = parseFen(renderState.fen);
 
-      // If clicking a legal target, execute the move
-      if (selectedSquare && legalTargets.includes(square)) {
+      // If a piece is selected, check if the clicked square is a legal target
+      // by consulting legalMoves directly (avoids stale legalTargets state dependency)
+      if (selectedSquare) {
         const fromTo = `${selectedSquare}${square}`;
-        // Check if this is a promotion move
-        const isPromotion = renderState.legalMoves.some(
-          (m) => m.startsWith(fromTo) && m.length === 5
-        );
-        if (isPromotion) {
-          setPendingPromotion({ from: selectedSquare, to: square });
+        const isLegalTarget = renderState.legalMoves.some((m) => m.startsWith(fromTo));
+        if (isLegalTarget) {
+          const isPromotion = renderState.legalMoves.some(
+            (m) => m.startsWith(fromTo) && m.length === 5
+          );
+          if (isPromotion) {
+            setPendingPromotion({ from: selectedSquare, to: square });
+            return;
+          }
+          onMove(fromTo);
+          setSelectedSquare(null);
+          setLegalTargets([]);
           return;
         }
-        onMove(fromTo);
-        setSelectedSquare(null);
-        setLegalTargets([]);
-        return;
       }
 
       // Try to select the clicked square
@@ -71,12 +76,12 @@ export function useBoardInteraction(
       // Filter legal moves from this square
       const targets = renderState.legalMoves
         .filter((m) => m.startsWith(square))
-        .map((m) => m.slice(2, 4));
+        .map((m) => m.slice(2, 4) as Square);
 
       setSelectedSquare(square);
       setLegalTargets(targets);
     },
-    [renderState, selectedSquare, legalTargets, onMove]
+    [renderState, selectedSquare, pendingPromotion, onMove]
   );
 
   const handlePromotionSelect = useCallback(
@@ -90,6 +95,8 @@ export function useBoardInteraction(
     [pendingPromotion, onMove]
   );
 
+  // Cancel restores the board to piece-selected state:
+  // selectedSquare and legalTargets are preserved (not cleared).
   const handlePromotionCancel = useCallback(() => {
     setPendingPromotion(null);
   }, []);

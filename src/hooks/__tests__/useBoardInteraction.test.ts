@@ -170,6 +170,7 @@ describe("useBoardInteraction", () => {
       expect(onMove).not.toHaveBeenCalled();
       expect(result.current.pendingPromotion).toBeNull();
       expect(result.current.selectedSquare).toBe("e7");
+      expect(result.current.legalTargets).toContain("e8");
     });
   });
 });
