@@ -1,5 +1,6 @@
 import { useChessWorker } from "./hooks/useChessWorker";
 import { WasmErrorBoundary } from "./components/WasmErrorBoundary";
+import { UndoRedoButtons } from "./components/UndoRedoButtons";
 
 function LoadingIndicator() {
   return (
@@ -22,7 +23,7 @@ function ErrorMessage({ message }: { message: string }) {
 }
 
 function ChessApp() {
-  const { initState, renderState } = useChessWorker();
+  const { initState, renderState, sendUndo, sendRedo } = useChessWorker();
 
   switch (initState) {
     case "uninit":
@@ -35,11 +36,19 @@ function ChessApp() {
       );
     case "ready":
       return (
-        <p>
-          {renderState
-            ? `FEN: ${renderState.fen}`
-            : "Chess engine ready"}
-        </p>
+        <div>
+          <p>
+            {renderState
+              ? `FEN: ${renderState.fen}`
+              : "Chess engine ready"}
+          </p>
+          <UndoRedoButtons
+            canUndo={renderState?.canUndo ?? false}
+            canRedo={renderState?.canRedo ?? false}
+            onUndo={sendUndo}
+            onRedo={sendRedo}
+          />
+        </div>
       );
   }
 }
