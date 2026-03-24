@@ -34,6 +34,7 @@ function ChessApp() {
         <ErrorMessage message="Failed to initialize chess engine." />
       );
     case "ready":
+      console.log("renderState:", renderState);
       return (
         <p>
           {renderState
