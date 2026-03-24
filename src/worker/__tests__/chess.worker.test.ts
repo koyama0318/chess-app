@@ -77,9 +77,8 @@ const mockFromFen = vi.fn((fen: string) => {
 
 vi.mock("../../../wasm-pkg/chess_wasm", () => ({
   default: mockInitFn,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ChessGame: Object.assign(
-    function MockChessGameConstructor(this: any) {
+    function MockChessGameConstructor(this: unknown) {
       return mockGameInstance;
     },
     {

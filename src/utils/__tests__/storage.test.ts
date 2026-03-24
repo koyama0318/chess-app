@@ -3,6 +3,8 @@ import {
   saveMoveEvent,
   loadMoveEvents,
   clearMoveEvents,
+  popMoveEvent,
+  getMoveEventCount,
   saveSnapshot,
   loadGameState,
   SNAPSHOT_INTERVAL,
@@ -95,6 +97,53 @@ describe("storage", () => {
     it("returns null fenSnapshot with moves when no snapshot", () => {
       saveMoveEvent("e2e4");
       expect(loadGameState()).toEqual({ fenSnapshot: null, uciMoves: ["e2e4"] });
+    });
+  });
+
+  describe("popMoveEvent", () => {
+    it("does nothing on empty storage", () => {
+      expect(() => popMoveEvent()).not.toThrow();
+      expect(loadMoveEvents()).toEqual([]);
+    });
+
+    it("removes the last event", () => {
+      saveMoveEvent("e2e4");
+      saveMoveEvent("e7e5");
+      popMoveEvent();
+      expect(loadMoveEvents()).toEqual(["e2e4"]);
+    });
+
+    it("removes only the last event when multiple exist", () => {
+      saveMoveEvent("e2e4");
+      saveMoveEvent("e7e5");
+      saveMoveEvent("d2d4");
+      popMoveEvent();
+      expect(loadMoveEvents()).toEqual(["e2e4", "e7e5"]);
+    });
+
+    it("leaves storage empty after removing last event", () => {
+      saveMoveEvent("e2e4");
+      popMoveEvent();
+      expect(loadMoveEvents()).toEqual([]);
+    });
+  });
+
+  describe("getMoveEventCount", () => {
+    it("returns 0 when empty", () => {
+      expect(getMoveEventCount()).toBe(0);
+    });
+
+    it("returns correct count after saves", () => {
+      saveMoveEvent("e2e4");
+      saveMoveEvent("e7e5");
+      expect(getMoveEventCount()).toBe(2);
+    });
+
+    it("decrements after pop", () => {
+      saveMoveEvent("e2e4");
+      saveMoveEvent("e7e5");
+      popMoveEvent();
+      expect(getMoveEventCount()).toBe(1);
     });
   });
 
