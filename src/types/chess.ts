@@ -1,4 +1,4 @@
-export const enum GameStatus {
+export enum GameStatus {
   InProgress = 0,
   Check = 1,
   Checkmate = 2,

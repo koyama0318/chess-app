@@ -33,5 +33,4 @@ export function handleMessage(event: MessageEvent<WorkerRequest>): void {
 }
 
 // Attach to self.onmessage when running as a Web Worker
-declare const self: DedicatedWorkerGlobalScope;
-self.onmessage = handleMessage;
+onmessage = handleMessage;
