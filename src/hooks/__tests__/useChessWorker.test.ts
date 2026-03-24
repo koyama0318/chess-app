@@ -224,6 +224,19 @@ describe("useChessWorker", () => {
       expect(spy).toHaveBeenCalledWith("e2e4");
     });
 
+    it("sendUndo calls popMoveEvent before posting UNDO", () => {
+      const popSpy = vi.spyOn(storage, "popMoveEvent").mockImplementation(() => {});
+      const { result } = renderHook(() => useChessWorker());
+
+      act(() => { sendStateUpdate(); });
+      workerInstance.postMessage.mockClear();
+
+      act(() => { result.current.sendUndo(); });
+
+      expect(popSpy).toHaveBeenCalled();
+      expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "UNDO" });
+    });
+
     it("resetGame clears localStorage and sends INIT", () => {
       const clearSpy = vi.spyOn(storage, "clearMoveEvents").mockImplementation(() => {});
       const { result } = renderHook(() => useChessWorker());

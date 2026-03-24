@@ -26,6 +26,8 @@ vi.mock("../../utils/storage", () => ({
   saveMoveEvent: vi.fn(),
   saveSnapshot: vi.fn(),
   clearMoveEvents: vi.fn(),
+  popMoveEvent: vi.fn(),
+  getMoveEventCount: vi.fn(() => 0),
   SNAPSHOT_INTERVAL: 20,
 }));
 

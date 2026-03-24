@@ -7,6 +7,7 @@ import {
   saveSnapshot,
   loadGameState,
   clearMoveEvents,
+  popMoveEvent,
   SNAPSHOT_INTERVAL,
 } from "../utils/storage";
 
@@ -125,6 +126,7 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
   }, []);
 
   const sendUndo = useCallback(() => {
+    popMoveEvent();
     workerRef.current?.postMessage({ type: "UNDO" });
   }, []);
 
