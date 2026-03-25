@@ -30,16 +30,17 @@ export function Square({
   const isLight = (file + rank) % 2 === 1;
 
   let bg = isLight ? "#f0d9b5" : "#b58863";
-  if (isSelected) bg = "#f6f669";
-  else if (isLegalTarget) bg = isLight ? "#cdd26a" : "#aaa23a";
-  else if (isLastMove) bg = isLight ? "#f6f632" : "#c9c93a";
+  let bgIsLight = isLight;
+  if (isSelected) { bg = "#f6f669"; bgIsLight = true; }
+  else if (isLegalTarget) { bg = isLight ? "#cdd26a" : "#aaa23a"; }
+  else if (isLastMove) { bg = isLight ? "#e8e87a" : "#b5b54a"; bgIsLight = isLight; }
 
   const labelStyle: React.CSSProperties = {
     position: "absolute",
     fontSize: "13px",
     lineHeight: 1,
     fontWeight: 700,
-    color: isLight ? "#1a1a1a" : "#f5f5f5",
+    color: bgIsLight ? "#1a1a1a" : "#f5f5f5",
     pointerEvents: "none",
     userSelect: "none",
     zIndex: 1,
