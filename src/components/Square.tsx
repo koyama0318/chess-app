@@ -80,16 +80,19 @@ export function Square({
       </div>
       {rankLabel && (
         <span
+          aria-hidden="true"
           style={{
             position: "absolute",
             top: 2,
             left: 2,
-            fontSize: "11px",
+            fontSize: "13px",
             lineHeight: 1,
             fontWeight: 700,
-            color: isLight ? "#b58863" : "#f0d9b5",
+            color: isLight ? "#1a1a1a" : "#f5f5f5",
             pointerEvents: "none",
             userSelect: "none",
+            zIndex: 1,
+            opacity: 0.85,
           }}
         >
           {rankLabel}
@@ -97,16 +100,19 @@ export function Square({
       )}
       {fileLabel && (
         <span
+          aria-hidden="true"
           style={{
             position: "absolute",
             bottom: 2,
             right: 2,
-            fontSize: "11px",
+            fontSize: "13px",
             lineHeight: 1,
             fontWeight: 700,
-            color: isLight ? "#b58863" : "#f0d9b5",
+            color: isLight ? "#1a1a1a" : "#f5f5f5",
             pointerEvents: "none",
             userSelect: "none",
+            zIndex: 1,
+            opacity: 0.85,
           }}
         >
           {fileLabel}
