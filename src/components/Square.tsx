@@ -31,6 +31,18 @@ export function Square({
   if (isSelected) bg = "#f6f669";
   else if (isLegalTarget) bg = isLight ? "#cdd26a" : "#aaa23a";
 
+  const labelStyle: React.CSSProperties = {
+    position: "absolute",
+    fontSize: "13px",
+    lineHeight: 1,
+    fontWeight: 700,
+    color: isLight ? "#1a1a1a" : "#f5f5f5",
+    pointerEvents: "none",
+    userSelect: "none",
+    zIndex: 1,
+    opacity: 0.85,
+  };
+
   return (
     <div
       onClick={() => onClick(square)}
@@ -79,42 +91,12 @@ export function Square({
         )}
       </div>
       {rankLabel && (
-        <span
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            top: 2,
-            left: 2,
-            fontSize: "13px",
-            lineHeight: 1,
-            fontWeight: 700,
-            color: isLight ? "#1a1a1a" : "#f5f5f5",
-            pointerEvents: "none",
-            userSelect: "none",
-            zIndex: 1,
-            opacity: 0.85,
-          }}
-        >
+        <span aria-hidden="true" style={{ ...labelStyle, top: 2, left: 2 }}>
           {rankLabel}
         </span>
       )}
       {fileLabel && (
-        <span
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            bottom: 2,
-            right: 2,
-            fontSize: "13px",
-            lineHeight: 1,
-            fontWeight: 700,
-            color: isLight ? "#1a1a1a" : "#f5f5f5",
-            pointerEvents: "none",
-            userSelect: "none",
-            zIndex: 1,
-            opacity: 0.85,
-          }}
-        >
+        <span aria-hidden="true" style={{ ...labelStyle, bottom: 2, right: 2 }}>
           {fileLabel}
         </span>
       )}
