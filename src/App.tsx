@@ -84,6 +84,7 @@ function ChessApp({
           {lastError && renderState.status === GameStatusEnum.InProgress && (
             <div
               role="alert"
+              aria-label="Game error"
               style={{
                 padding: "8px 16px",
                 backgroundColor: "#fee",
