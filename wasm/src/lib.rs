@@ -112,11 +112,12 @@ impl ChessGame {
     fn apply_move_inner(&mut self, uci_move: &str) -> Result<(), String> {
         let pos = self.history.last().expect("history must never be empty");
 
-        let uci: shakmaty::uci::UciMove = uci_move
-            .parse()
-            .map_err(|e: shakmaty::uci::ParseUciMoveError| {
-                format!("Invalid UCI move format: {}", e)
-            })?;
+        let uci: shakmaty::uci::UciMove =
+            uci_move
+                .parse()
+                .map_err(|e: shakmaty::uci::ParseUciMoveError| {
+                    format!("Invalid UCI move format: {}", e)
+                })?;
 
         let m = uci
             .to_move(pos)
@@ -134,6 +135,12 @@ impl ChessGame {
 
     fn current_pos(&self) -> &Chess {
         self.history.last().expect("history must never be empty")
+    }
+}
+
+impl Default for ChessGame {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -281,23 +288,44 @@ mod tests {
     #[test]
     fn test_castling_moves() {
         let moves = sorted_moves("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
-        assert!(moves.contains(&"e1g1".to_string()), "kingside castling missing");
-        assert!(moves.contains(&"e1c1".to_string()), "queenside castling missing");
+        assert!(
+            moves.contains(&"e1g1".to_string()),
+            "kingside castling missing"
+        );
+        assert!(
+            moves.contains(&"e1c1".to_string()),
+            "queenside castling missing"
+        );
     }
 
     #[test]
     fn test_en_passant() {
         let moves = sorted_moves("rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3");
-        assert!(moves.contains(&"e5d6".to_string()), "en passant capture missing");
+        assert!(
+            moves.contains(&"e5d6".to_string()),
+            "en passant capture missing"
+        );
     }
 
     #[test]
     fn test_pawn_promotion() {
         let moves = sorted_moves("k7/4P3/8/8/8/8/8/4K3 w - - 0 1");
-        assert!(moves.contains(&"e7e8q".to_string()), "queen promotion missing");
-        assert!(moves.contains(&"e7e8r".to_string()), "rook promotion missing");
-        assert!(moves.contains(&"e7e8b".to_string()), "bishop promotion missing");
-        assert!(moves.contains(&"e7e8n".to_string()), "knight promotion missing");
+        assert!(
+            moves.contains(&"e7e8q".to_string()),
+            "queen promotion missing"
+        );
+        assert!(
+            moves.contains(&"e7e8r".to_string()),
+            "rook promotion missing"
+        );
+        assert!(
+            moves.contains(&"e7e8b".to_string()),
+            "bishop promotion missing"
+        );
+        assert!(
+            moves.contains(&"e7e8n".to_string()),
+            "knight promotion missing"
+        );
     }
 
     #[test]
@@ -500,9 +528,7 @@ mod tests {
     #[test]
     fn game_status_stalemate() {
         let fen: Fen = "k7/8/KQ6/8/8/8/8/8 b - - 0 1".parse().unwrap();
-        let pos: Chess = fen
-            .into_position(shakmaty::CastlingMode::Standard)
-            .unwrap();
+        let pos: Chess = fen.into_position(shakmaty::CastlingMode::Standard).unwrap();
         let game = ChessGame {
             history: vec![pos],
             redo_stack: Vec::new(),
@@ -514,9 +540,7 @@ mod tests {
     fn check_position_game_status_is_in_progress() {
         // In check, game is still InProgress (not a terminal state)
         let fen: Fen = "4k3/8/8/8/8/8/8/4RK2 b - - 0 1".parse().unwrap();
-        let pos: Chess = fen
-            .into_position(shakmaty::CastlingMode::Standard)
-            .unwrap();
+        let pos: Chess = fen.into_position(shakmaty::CastlingMode::Standard).unwrap();
         assert!(pos.is_check(), "position should be in check");
         let game = ChessGame {
             history: vec![pos],
@@ -529,9 +553,7 @@ mod tests {
     #[test]
     fn is_check_detected_via_position() {
         let fen: Fen = "4k3/8/8/8/8/8/8/4RK2 b - - 0 1".parse().unwrap();
-        let pos: Chess = fen
-            .into_position(shakmaty::CastlingMode::Standard)
-            .unwrap();
+        let pos: Chess = fen.into_position(shakmaty::CastlingMode::Standard).unwrap();
         // pos.is_check() should return true for this check position
         assert!(pos.is_check());
     }
