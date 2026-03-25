@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="64" fill="#1a1a1a"/>
+  <g transform="translate(256,256)">
+    <!-- Base -->
+    <rect x="-80" y="100" width="160" height="20" rx="4" fill="#f0d9b5"/>
+    <!-- Pedestal -->
+    <rect x="-60" y="60" width="120" height="40" rx="4" fill="#f0d9b5"/>
+    <!-- Body -->
+    <rect x="-40" y="-20" width="80" height="80" rx="8" fill="#f0d9b5"/>
+    <!-- Neck -->
+    <rect x="-20" y="-50" width="40" height="30" rx="4" fill="#f0d9b5"/>
+    <!-- Cross vertical -->
+    <rect x="-8" y="-120" width="16" height="70" rx="4" fill="#f0d9b5"/>
+    <!-- Cross horizontal -->
+    <rect x="-28" y="-105" width="56" height="16" rx="4" fill="#f0d9b5"/>
+  </g>
+</svg>
