@@ -16,6 +16,7 @@ function makeRenderState(partial: Partial<RenderState> = {}): RenderState {
     canUndo: false,
     canRedo: false,
     currentTurn: "white",
+    lastMove: null,
     ...partial,
   };
 }

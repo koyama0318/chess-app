@@ -44,7 +44,6 @@ function ChessApp({
     initState,
     renderState,
     lastError,
-    lastMove,
     sendMove,
     sendUndo,
     sendRedo,
@@ -128,7 +127,7 @@ function ChessApp({
             renderState={renderState}
             onMove={sendMove}
             flipped={flipped}
-            lastMove={lastMove}
+            lastMove={renderState.lastMove}
           />
           <div style={{ display: "flex", gap: "8px" }}>
             <button

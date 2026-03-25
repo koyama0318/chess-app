@@ -6,6 +6,7 @@ type WasmModule = typeof import("../../wasm-pkg/chess_wasm");
 type ChessGameInstance = InstanceType<WasmModule["ChessGame"]>;
 
 let game: ChessGameInstance | null = null;
+let lastMove: { from: string; to: string } | null = null;
 
 function postResponse(response: WorkerResponse): void {
   postMessage(response);
@@ -13,7 +14,9 @@ function postResponse(response: WorkerResponse): void {
 
 function getRenderState(): RenderState {
   if (!game) throw new Error("Game not initialized");
-  return game.render_state() as unknown as RenderState;
+  const state = game.render_state() as unknown as RenderState;
+  state.lastMove = lastMove;
+  return state;
 }
 
 async function initWasm(fenSnapshot?: string | null): Promise<void> {
@@ -35,6 +38,7 @@ export async function handleMessage(
     case "INIT": {
       try {
         await initWasm();
+        lastMove = null;
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({
@@ -47,8 +51,15 @@ export async function handleMessage(
     case "INIT_FROM_EVENTS": {
       try {
         await initWasm(data.payload.fenSnapshot);
-        for (const move of data.payload.uciMoves) {
+        const moves = data.payload.uciMoves;
+        for (const move of moves) {
           game!.apply_move(move);
+        }
+        if (moves.length > 0) {
+          const last = moves[moves.length - 1];
+          lastMove = { from: last.slice(0, 2), to: last.slice(2, 4) };
+        } else {
+          lastMove = null;
         }
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
@@ -62,7 +73,9 @@ export async function handleMessage(
     case "APPLY_MOVE": {
       try {
         if (!game) throw new Error("Game not initialized");
-        game.apply_move(data.payload.uciMove);
+        const uci = data.payload.uciMove;
+        game.apply_move(uci);
+        lastMove = { from: uci.slice(0, 2), to: uci.slice(2, 4) };
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({
@@ -76,6 +89,7 @@ export async function handleMessage(
       try {
         if (!game) throw new Error("Game not initialized");
         game.undo();
+        lastMove = null;
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({
@@ -89,6 +103,7 @@ export async function handleMessage(
       try {
         if (!game) throw new Error("Game not initialized");
         game.redo();
+        lastMove = null;
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({
@@ -103,6 +118,7 @@ export async function handleMessage(
         if (!game) throw new Error("Game not initialized");
         game.reset();
         clearMoveEvents();
+        lastMove = null;
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({
@@ -117,6 +133,7 @@ export async function handleMessage(
         const mod = await import("../../wasm-pkg/chess_wasm");
         await mod.default();
         game = mod.ChessGame.from_fen(data.payload.fen) as ChessGameInstance;
+        lastMove = null;
         postResponse({ type: "STATE_UPDATE", payload: getRenderState() });
       } catch (e) {
         postResponse({

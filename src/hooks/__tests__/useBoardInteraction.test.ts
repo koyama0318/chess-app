@@ -16,6 +16,7 @@ function makeRenderState(overrides?: Partial<RenderState>): RenderState {
     canUndo: false,
     canRedo: false,
     currentTurn: "white",
+    lastMove: null,
     ...overrides,
   };
 }

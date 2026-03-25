@@ -61,6 +61,7 @@ class MockChessGame {
       canUndo: this.can_undo(),
       canRedo: this.can_redo(),
       currentTurn: "white" as const,
+      lastMove: null,
     };
   }
 }
