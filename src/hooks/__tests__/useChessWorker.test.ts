@@ -220,6 +220,47 @@ describe("useChessWorker", () => {
     expect(workerInstance.terminate).toHaveBeenCalled();
   });
 
+  describe("retry", () => {
+    it("transitions from error back to initializing and re-sends INIT", () => {
+      const { result } = renderHook(() => useChessWorker());
+
+      // Put into error state
+      act(() => {
+        workerInstance.onmessage?.(
+          new MessageEvent("message", {
+            data: { type: "ERROR", payload: { message: "init failed" } },
+          })
+        );
+      });
+      expect(result.current.initState).toBe("error");
+
+      workerInstance.postMessage.mockClear();
+
+      act(() => {
+        result.current.retry();
+      });
+
+      expect(result.current.initState).toBe("initializing");
+      expect(result.current.lastError).toBeNull();
+      expect(result.current.renderState).toBeNull();
+      expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "INIT" });
+    });
+
+    it("does nothing when not in error state", () => {
+      const { result } = renderHook(() => useChessWorker());
+
+      // In initializing state
+      workerInstance.postMessage.mockClear();
+
+      act(() => {
+        result.current.retry();
+      });
+
+      // Should not re-send INIT
+      expect(workerInstance.postMessage).not.toHaveBeenCalled();
+    });
+  });
+
   describe("localStorage event sourcing", () => {
     it("sends INIT_FROM_EVENTS when localStorage has saved moves", () => {
       vi.spyOn(storage, "loadGameState").mockReturnValue({ fenSnapshot: null, uciMoves: ["e2e4", "e7e5"] });

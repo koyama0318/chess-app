@@ -13,24 +13,28 @@ import {
 
 export type InitState = "uninit" | "initializing" | "ready" | "error";
 
-interface State {
+export interface State {
   initState: InitState;
   renderState: RenderState | null;
   lastError: string | null;
 }
 
-type Action =
+export type Action =
   | { type: "START_INIT" }
   | { type: "RESET" }
+  | { type: "RETRY" }
   | { type: "ERROR"; message: string }
   | { type: "STATE_UPDATE"; payload: RenderState };
 
-function reducer(state: State, action: Action): State {
+export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "START_INIT":
       if (state.initState !== "uninit") return state;
       return { ...state, initState: "initializing" };
     case "RESET":
+      return { ...initialState, initState: "initializing" };
+    case "RETRY":
+      if (state.initState !== "error") return state;
       return { ...initialState, initState: "initializing" };
     case "ERROR":
       if (state.initState === "initializing") {
@@ -48,7 +52,7 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-const initialState: State = {
+export const initialState: State = {
   initState: "uninit",
   renderState: null,
   lastError: null,
@@ -62,6 +66,7 @@ export interface UseChessWorkerReturn {
   sendUndo: () => void;
   sendRedo: () => void;
   resetGame: () => void;
+  retry: () => void;
 }
 
 export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
@@ -134,6 +139,12 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
     workerRef.current?.postMessage({ type: "REDO" });
   }, []);
 
+  const retry = useCallback(() => {
+    if (state.initState !== "error") return;
+    dispatch({ type: "RETRY" });
+    workerRef.current?.postMessage({ type: "INIT" });
+  }, [state.initState]);
+
   const resetGame = useCallback(() => {
     clearMoveEvents();
     moveCountRef.current = 0;
@@ -151,5 +162,6 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
     sendUndo,
     sendRedo,
     resetGame,
+    retry,
   };
 }
