@@ -220,6 +220,75 @@ describe("useChessWorker", () => {
     expect(workerInstance.terminate).toHaveBeenCalled();
   });
 
+  describe("retry", () => {
+    it("transitions from error to initializing and re-sends INIT", () => {
+      const { result } = renderHook(() => useChessWorker());
+
+      // Trigger error during init
+      act(() => {
+        workerInstance.onmessage?.(
+          new MessageEvent("message", {
+            data: { type: "ERROR", payload: { message: "init failed" } },
+          })
+        );
+      });
+      expect(result.current.initState).toBe("error");
+
+      // Clear mock to track new calls
+      workerInstance.postMessage.mockClear();
+
+      // Retry should transition back to initializing
+      act(() => {
+        result.current.retry();
+      });
+
+      expect(result.current.initState).toBe("initializing");
+      expect(result.current.lastError).toBeNull();
+      expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "INIT" });
+    });
+
+    it("does nothing when not in error state", () => {
+      const { result } = renderHook(() => useChessWorker());
+
+      // Become ready
+      act(() => {
+        sendStateUpdate(INIT_STATE_UPDATE);
+      });
+
+      workerInstance.postMessage.mockClear();
+
+      act(() => {
+        result.current.retry();
+      });
+
+      // Should not change state or send messages
+      expect(result.current.initState).toBe("ready");
+      expect(workerInstance.postMessage).not.toHaveBeenCalled();
+    });
+
+    it("preserves localStorage state (does not clear moves)", () => {
+      vi.spyOn(storage, "loadGameState").mockReturnValue({ fenSnapshot: null, uciMoves: ["e2e4"] });
+      const clearSpy = vi.spyOn(storage, "clearMoveEvents").mockImplementation(() => {});
+      const { result } = renderHook(() => useChessWorker());
+
+      // Trigger error
+      act(() => {
+        workerInstance.onmessage?.(
+          new MessageEvent("message", {
+            data: { type: "ERROR", payload: { message: "init failed" } },
+          })
+        );
+      });
+
+      act(() => {
+        result.current.retry();
+      });
+
+      // retry should NOT clear localStorage (unlike resetGame)
+      expect(clearSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe("localStorage event sourcing", () => {
     it("sends INIT_FROM_EVENTS when localStorage has saved moves", () => {
       vi.spyOn(storage, "loadGameState").mockReturnValue({ fenSnapshot: null, uciMoves: ["e2e4", "e7e5"] });
