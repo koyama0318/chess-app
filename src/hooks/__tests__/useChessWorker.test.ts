@@ -319,4 +319,62 @@ describe("useChessWorker", () => {
       expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "INIT" });
     });
   });
+
+  describe("lastMove", () => {
+    it("is null on initial load", () => {
+      const { result } = renderHook(() => useChessWorker());
+      expect(result.current.lastMove).toBeNull();
+    });
+
+    it("is set to from/to after sendMove", () => {
+      const { result } = renderHook(() => useChessWorker());
+      act(() => { sendStateUpdate(); });
+
+      act(() => { result.current.sendMove("e2e4"); });
+
+      expect(result.current.lastMove).toEqual({ from: "e2", to: "e4" });
+    });
+
+    it("extracts correct squares from promotion move (5-char UCI)", () => {
+      const { result } = renderHook(() => useChessWorker());
+      act(() => { sendStateUpdate(); });
+
+      act(() => { result.current.sendMove("e7e8q"); });
+
+      expect(result.current.lastMove).toEqual({ from: "e7", to: "e8" });
+    });
+
+    it("is null after sendUndo", () => {
+      const { result } = renderHook(() => useChessWorker());
+      act(() => { sendStateUpdate(); });
+      act(() => { result.current.sendMove("e2e4"); });
+      expect(result.current.lastMove).not.toBeNull();
+
+      act(() => { result.current.sendUndo(); });
+
+      expect(result.current.lastMove).toBeNull();
+    });
+
+    it("is null after sendRedo", () => {
+      const { result } = renderHook(() => useChessWorker());
+      act(() => { sendStateUpdate(); });
+      act(() => { result.current.sendMove("e2e4"); });
+
+      act(() => { result.current.sendRedo(); });
+
+      expect(result.current.lastMove).toBeNull();
+    });
+
+    it("is null after resetGame", () => {
+      vi.spyOn(storage, "clearMoveEvents").mockImplementation(() => {});
+      const { result } = renderHook(() => useChessWorker());
+      act(() => { sendStateUpdate(); });
+      act(() => { result.current.sendMove("e2e4"); });
+      expect(result.current.lastMove).not.toBeNull();
+
+      act(() => { result.current.resetGame(); });
+
+      expect(result.current.lastMove).toBeNull();
+    });
+  });
 });

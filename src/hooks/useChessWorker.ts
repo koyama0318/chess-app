@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { RenderState } from "../types/chess";
 import type { WorkerResponse } from "../worker/types";
 import ChessWorker from "../worker/chess.worker?worker";
@@ -75,7 +75,7 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
   const workerRef = useRef<InstanceType<typeof ChessWorker> | null>(null);
   const moveCountRef = useRef(0);
   const pendingSnapshotRef = useRef(false);
-  const lastMoveRef = useRef<{ from: string; to: string } | null>(null);
+  const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
 
   useEffect(() => {
     const worker = new ChessWorker();
@@ -126,7 +126,7 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
     if (moveCountRef.current % SNAPSHOT_INTERVAL === 0) {
       pendingSnapshotRef.current = true;
     }
-    lastMoveRef.current = { from: uciMove.slice(0, 2), to: uciMove.slice(2, 4) };
+    setLastMove({ from: uciMove.slice(0, 2), to: uciMove.slice(2, 4) });
     workerRef.current?.postMessage({
       type: "APPLY_MOVE",
       payload: { uciMove },
@@ -135,12 +135,12 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
 
   const sendUndo = useCallback(() => {
     popMoveEvent();
-    lastMoveRef.current = null;
+    setLastMove(null);
     workerRef.current?.postMessage({ type: "UNDO" });
   }, []);
 
   const sendRedo = useCallback(() => {
-    lastMoveRef.current = null;
+    setLastMove(null);
     workerRef.current?.postMessage({ type: "REDO" });
   }, []);
 
@@ -156,7 +156,7 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
     clearMoveEvents();
     moveCountRef.current = 0;
     pendingSnapshotRef.current = false;
-    lastMoveRef.current = null;
+    setLastMove(null);
     dispatch({ type: "RESET" });
     workerRef.current?.postMessage({ type: "INIT" });
   }, []);
@@ -165,7 +165,7 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
     initState: state.initState,
     renderState: state.renderState,
     lastError: state.lastError,
-    lastMove: lastMoveRef.current,
+    lastMove,
     sendMove,
     sendUndo,
     sendRedo,

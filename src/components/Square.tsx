@@ -23,7 +23,7 @@ export function Square({
   onPointerDown,
   rankLabel,
   fileLabel,
-  isLastMove,
+  isLastMove = false,
 }: SquareProps) {
   const file = square.charCodeAt(0) - "a".charCodeAt(0); // 0-7
   const rank = parseInt(square[1], 10) - 1; // 0-7
