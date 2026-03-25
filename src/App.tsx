@@ -116,6 +116,7 @@ function ChessApp({
                     fontSize: "16px",
                     padding: "0 4px",
                     lineHeight: 1,
+                    outline: "revert",
                   }}
                 >
                   ×
