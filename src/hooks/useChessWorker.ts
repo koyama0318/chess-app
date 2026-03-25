@@ -75,6 +75,23 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
   const moveCountRef = useRef(0);
   const pendingSnapshotRef = useRef(false);
 
+  const sendInitMessage = useCallback(() => {
+    if (initialFen) {
+      workerRef.current?.postMessage({ type: "INIT_FROM_FEN", payload: { fen: initialFen } });
+    } else {
+      const { fenSnapshot, uciMoves } = loadGameState();
+      if (fenSnapshot !== null || uciMoves.length > 0) {
+        moveCountRef.current = uciMoves.length;
+        workerRef.current?.postMessage({
+          type: "INIT_FROM_EVENTS",
+          payload: { fenSnapshot, uciMoves },
+        });
+      } else {
+        workerRef.current?.postMessage({ type: "INIT" });
+      }
+    }
+  }, [initialFen]);
+
   useEffect(() => {
     const worker = new ChessWorker();
     workerRef.current = worker;
@@ -96,27 +113,13 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
     };
 
     dispatch({ type: "START_INIT" });
-
-    if (initialFen) {
-      worker.postMessage({ type: "INIT_FROM_FEN", payload: { fen: initialFen } });
-    } else {
-      const { fenSnapshot, uciMoves } = loadGameState();
-      if (fenSnapshot !== null || uciMoves.length > 0) {
-        moveCountRef.current = uciMoves.length;
-        worker.postMessage({
-          type: "INIT_FROM_EVENTS",
-          payload: { fenSnapshot, uciMoves },
-        });
-      } else {
-        worker.postMessage({ type: "INIT" });
-      }
-    }
+    sendInitMessage();
 
     return () => {
       worker.terminate();
       workerRef.current = null;
     };
-  }, []);
+  }, [sendInitMessage]);
 
   const sendMove = useCallback((uciMove: string) => {
     saveMoveEvent(uciMove);
@@ -140,10 +143,9 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
   }, []);
 
   const retry = useCallback(() => {
-    if (state.initState !== "error") return;
     dispatch({ type: "RETRY" });
-    workerRef.current?.postMessage({ type: "INIT" });
-  }, [state.initState]);
+    sendInitMessage();
+  }, [sendInitMessage]);
 
   const resetGame = useCallback(() => {
     clearMoveEvents();
@@ -152,7 +154,6 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
     dispatch({ type: "RESET" });
     workerRef.current?.postMessage({ type: "INIT" });
   }, []);
-
 
   return {
     initState: state.initState,

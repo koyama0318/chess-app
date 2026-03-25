@@ -247,7 +247,7 @@ describe("useChessWorker", () => {
       expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "INIT" });
     });
 
-    it("does nothing when not in error state", () => {
+    it("does not change initState when not in error state", () => {
       const { result } = renderHook(() => useChessWorker());
 
       // Become ready
@@ -255,18 +255,15 @@ describe("useChessWorker", () => {
         sendStateUpdate(INIT_STATE_UPDATE);
       });
 
-      workerInstance.postMessage.mockClear();
-
       act(() => {
         result.current.retry();
       });
 
-      // Should not change state or send messages
+      // Reducer guards: initState stays ready (RETRY action is no-op)
       expect(result.current.initState).toBe("ready");
-      expect(workerInstance.postMessage).not.toHaveBeenCalled();
     });
 
-    it("preserves localStorage state (does not clear moves)", () => {
+    it("preserves localStorage state and sends INIT_FROM_EVENTS on retry", () => {
       vi.spyOn(storage, "loadGameState").mockReturnValue({ fenSnapshot: null, uciMoves: ["e2e4"] });
       const clearSpy = vi.spyOn(storage, "clearMoveEvents").mockImplementation(() => {});
       const { result } = renderHook(() => useChessWorker());
@@ -280,12 +277,19 @@ describe("useChessWorker", () => {
         );
       });
 
+      workerInstance.postMessage.mockClear();
+
       act(() => {
         result.current.retry();
       });
 
       // retry should NOT clear localStorage (unlike resetGame)
       expect(clearSpy).not.toHaveBeenCalled();
+      // retry should re-send INIT_FROM_EVENTS respecting saved state
+      expect(workerInstance.postMessage).toHaveBeenCalledWith({
+        type: "INIT_FROM_EVENTS",
+        payload: { fenSnapshot: null, uciMoves: ["e2e4"] },
+      });
     });
   });
 
