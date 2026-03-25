@@ -50,12 +50,12 @@ export function Board({ renderState, onMove, flipped }: BoardProps) {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        {ranks.map((rank) => (
+        {ranks.map((rank, rankIdx) => (
           <div
             key={rank}
             style={{ display: "flex", flex: 1 }}
           >
-            {files.map((file) => {
+            {files.map((file, fileIdx) => {
               const sq = `${file}${rank}`;
               const isDragging = dragState.isDragging && dragState.draggedFrom === sq;
               return (
@@ -67,6 +67,8 @@ export function Board({ renderState, onMove, flipped }: BoardProps) {
                   isLegalTarget={legalTargets.includes(sq)}
                   onClick={handleSquareClick}
                   onPointerDown={handlePointerDown}
+                  rankLabel={fileIdx === 0 ? String(rank) : undefined}
+                  fileLabel={rankIdx === ranks.length - 1 ? file : undefined}
                 />
               );
             })}
