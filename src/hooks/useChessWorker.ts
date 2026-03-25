@@ -22,6 +22,7 @@ interface State {
 type Action =
   | { type: "START_INIT" }
   | { type: "RESET" }
+  | { type: "RETRY" }
   | { type: "ERROR"; message: string }
   | { type: "STATE_UPDATE"; payload: RenderState };
 
@@ -32,6 +33,9 @@ function reducer(state: State, action: Action): State {
       return { ...state, initState: "initializing" };
     case "RESET":
       return { ...initialState, initState: "initializing" };
+    case "RETRY":
+      if (state.initState !== "error") return state;
+      return { ...state, initState: "initializing", lastError: null };
     case "ERROR":
       if (state.initState === "initializing") {
         return { ...state, initState: "error", lastError: action.message };
@@ -62,6 +66,7 @@ export interface UseChessWorkerReturn {
   sendUndo: () => void;
   sendRedo: () => void;
   resetGame: () => void;
+  retry: () => void;
 }
 
 export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
@@ -134,6 +139,12 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
     workerRef.current?.postMessage({ type: "REDO" });
   }, []);
 
+  const retry = useCallback(() => {
+    if (state.initState !== "error") return;
+    dispatch({ type: "RETRY" });
+    workerRef.current?.postMessage({ type: "INIT" });
+  }, [state.initState]);
+
   const resetGame = useCallback(() => {
     clearMoveEvents();
     moveCountRef.current = 0;
@@ -151,5 +162,6 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
     sendUndo,
     sendRedo,
     resetGame,
+    retry,
   };
 }
