@@ -8,6 +8,7 @@ import { FlipButton } from "./components/FlipButton";
 import { GameOverModal } from "./components/GameOverModal";
 import { ResetButton } from "./components/ResetButton";
 import { ShareButton } from "./components/ShareButton";
+import { GameStatus as GameStatusEnum } from "./types/chess";
 import { getFenTurn } from "./utils/fen";
 import { loadMoveEvents } from "./utils/storage";
 import type { GameMode, AppPhase } from "./types/game";
@@ -39,8 +40,15 @@ function ChessApp({
   gameMode: GameMode | null;
   initialFen?: string;
 }) {
-  const { initState, renderState, sendMove, sendUndo, sendRedo, resetGame } =
-    useChessWorker(initialFen);
+  const {
+    initState,
+    renderState,
+    lastError,
+    sendMove,
+    sendUndo,
+    sendRedo,
+    resetGame,
+  } = useChessWorker(initialFen);
   const [flipped, setFlipped] = useState(false);
 
   switch (initState) {
@@ -73,6 +81,21 @@ function ChessApp({
             currentTurn={renderState.currentTurn}
             onRematch={resetGame}
           />
+          {lastError && renderState.status === GameStatusEnum.InProgress && (
+            <div
+              role="alert"
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#fee",
+                border: "1px solid #fcc",
+                borderRadius: "4px",
+                color: "#c33",
+                fontSize: "14px",
+              }}
+            >
+              {lastError}
+            </div>
+          )}
           <Board
             renderState={renderState}
             onMove={sendMove}
