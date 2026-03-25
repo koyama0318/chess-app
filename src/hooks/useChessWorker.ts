@@ -140,6 +140,8 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
   }, []);
 
   const retry = useCallback(() => {
+    // Guard needed here to prevent sending INIT to the worker when not in error state.
+    // The reducer also guards RETRY, but cannot prevent the postMessage side effect.
     if (state.initState !== "error") return;
     dispatch({ type: "RETRY" });
     workerRef.current?.postMessage({ type: "INIT" });
