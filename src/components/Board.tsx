@@ -10,12 +10,13 @@ interface BoardProps {
   renderState: RenderState;
   onMove: (uciMove: string) => void;
   flipped: boolean;
+  lastMove?: { from: string; to: string } | null;
 }
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const RANKS = [8, 7, 6, 5, 4, 3, 2, 1];
 
-export function Board({ renderState, onMove, flipped }: BoardProps) {
+export function Board({ renderState, onMove, flipped, lastMove }: BoardProps) {
   const {
     selectedSquare,
     legalTargets,
@@ -69,6 +70,7 @@ export function Board({ renderState, onMove, flipped }: BoardProps) {
                   onPointerDown={handlePointerDown}
                   rankLabel={fileIdx === 0 ? String(rank) : undefined}
                   fileLabel={rankIdx === ranks.length - 1 ? file : undefined}
+                  isLastMove={sq === lastMove?.from || sq === lastMove?.to}
                 />
               );
             })}
