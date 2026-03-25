@@ -13,6 +13,7 @@ const mockRenderState: RenderState = {
   canUndo: false,
   canRedo: false,
   currentTurn: "white",
+  lastMove: null,
 };
 
 describe("useChessWorker reducer", () => {

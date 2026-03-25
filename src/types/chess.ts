@@ -14,4 +14,5 @@ export interface RenderState {
   canUndo: boolean;
   canRedo: boolean;
   currentTurn: "white" | "black";
+  lastMove: { from: string; to: string } | null;
 }

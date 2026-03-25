@@ -35,6 +35,7 @@ describe("RenderState", () => {
       canUndo: false,
       canRedo: false,
       currentTurn: "white",
+      lastMove: null,
     };
     expect(state.fen).toBeTruthy();
     expect(state.board).toEqual({ e1: "K", d1: "Q" });

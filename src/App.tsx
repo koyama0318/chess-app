@@ -127,6 +127,7 @@ function ChessApp({
             renderState={renderState}
             onMove={sendMove}
             flipped={flipped}
+            lastMove={renderState.lastMove}
           />
           <div style={{ display: "flex", gap: "8px" }}>
             <button

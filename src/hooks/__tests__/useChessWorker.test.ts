@@ -39,6 +39,7 @@ const INIT_STATE_UPDATE: WorkerResponse = {
     canUndo: false,
     canRedo: false,
     currentTurn: "white",
+    lastMove: null,
   },
 };
 
@@ -156,6 +157,7 @@ describe("useChessWorker", () => {
               canUndo: false,
               canRedo: false,
               currentTurn: "white" as const,
+              lastMove: null,
             },
           },
         })
@@ -171,6 +173,7 @@ describe("useChessWorker", () => {
       canUndo: false,
       canRedo: false,
       currentTurn: "white",
+      lastMove: null,
     });
     expect(result.current.initState).toBe("ready");
   });
@@ -317,6 +320,51 @@ describe("useChessWorker", () => {
 
       expect(clearSpy).toHaveBeenCalled();
       expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: "INIT" });
+    });
+  });
+
+  describe("lastMove (from Worker RenderState)", () => {
+    it("is null on initial STATE_UPDATE", () => {
+      const { result } = renderHook(() => useChessWorker());
+      act(() => { sendStateUpdate(); });
+
+      expect(result.current.renderState?.lastMove).toBeNull();
+    });
+
+    it("reflects Worker lastMove after APPLY_MOVE response", () => {
+      const { result } = renderHook(() => useChessWorker());
+      act(() => { sendStateUpdate(); });
+
+      act(() => {
+        result.current.sendMove("e2e4");
+        // Simulate Worker response with lastMove set
+        sendStateUpdate({
+          type: "STATE_UPDATE",
+          payload: {
+            ...INIT_STATE_UPDATE.payload as RenderState,
+            lastMove: { from: "e2", to: "e4" },
+          },
+        });
+      });
+
+      expect(result.current.renderState?.lastMove).toEqual({ from: "e2", to: "e4" });
+    });
+
+    it("is null after UNDO response", () => {
+      const { result } = renderHook(() => useChessWorker());
+      act(() => { sendStateUpdate(); });
+
+      act(() => {
+        sendStateUpdate({
+          type: "STATE_UPDATE",
+          payload: {
+            ...INIT_STATE_UPDATE.payload as RenderState,
+            lastMove: null,
+          },
+        });
+      });
+
+      expect(result.current.renderState?.lastMove).toBeNull();
     });
   });
 });
