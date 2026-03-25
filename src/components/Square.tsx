@@ -9,6 +9,8 @@ interface SquareProps {
   isLegalTarget: boolean;
   onClick: (square: SquareType) => void;
   onPointerDown?: (event: React.PointerEvent<HTMLElement>, square: SquareType) => void;
+  rankLabel?: string;
+  fileLabel?: string;
 }
 
 export function Square({
@@ -18,6 +20,8 @@ export function Square({
   isLegalTarget,
   onClick,
   onPointerDown,
+  rankLabel,
+  fileLabel,
 }: SquareProps) {
   const file = square.charCodeAt(0) - "a".charCodeAt(0); // 0-7
   const rank = parseInt(square[1], 10) - 1; // 0-7
@@ -74,6 +78,40 @@ export function Square({
           />
         )}
       </div>
+      {rankLabel && (
+        <span
+          style={{
+            position: "absolute",
+            top: 2,
+            left: 2,
+            fontSize: "11px",
+            lineHeight: 1,
+            fontWeight: 700,
+            color: isLight ? "#b58863" : "#f0d9b5",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
+          {rankLabel}
+        </span>
+      )}
+      {fileLabel && (
+        <span
+          style={{
+            position: "absolute",
+            bottom: 2,
+            right: 2,
+            fontSize: "11px",
+            lineHeight: 1,
+            fontWeight: 700,
+            color: isLight ? "#b58863" : "#f0d9b5",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
+          {fileLabel}
+        </span>
+      )}
     </div>
   );
 }
