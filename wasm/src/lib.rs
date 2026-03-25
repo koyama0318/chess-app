@@ -637,9 +637,7 @@ mod tests {
         // FEN with halfmove clock at 100 (50 full moves without capture or pawn move)
         // Use K+R vs K+R to have sufficient material — draw is purely from 50-move rule
         let fen: Fen = "7k/8/8/8/8/8/8/R3K2r w - - 100 200".parse().unwrap();
-        let pos: Chess = fen
-            .into_position(shakmaty::CastlingMode::Standard)
-            .unwrap();
+        let pos: Chess = fen.into_position(shakmaty::CastlingMode::Standard).unwrap();
         let game = ChessGame {
             history: vec![pos],
             redo_stack: Vec::new(),
@@ -652,9 +650,7 @@ mod tests {
         // FEN with halfmove clock at 99 — not yet 50-move draw
         // Use K+R vs K to have sufficient material
         let fen: Fen = "8/8/8/8/8/8/8/R3K1k1 w - - 99 200".parse().unwrap();
-        let pos: Chess = fen
-            .into_position(shakmaty::CastlingMode::Standard)
-            .unwrap();
+        let pos: Chess = fen.into_position(shakmaty::CastlingMode::Standard).unwrap();
         let game = ChessGame {
             history: vec![pos],
             redo_stack: Vec::new(),
