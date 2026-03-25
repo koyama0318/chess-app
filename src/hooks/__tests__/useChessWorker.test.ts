@@ -114,6 +114,31 @@ describe("useChessWorker", () => {
     expect(result.current.lastError).toBe("not implemented");
   });
 
+  it("clears lastError on subsequent STATE_UPDATE", () => {
+    const { result } = renderHook(() => useChessWorker());
+
+    // Become ready
+    act(() => {
+      sendStateUpdate(INIT_STATE_UPDATE);
+    });
+
+    // Trigger an error
+    act(() => {
+      workerInstance.onmessage?.(
+        new MessageEvent("message", {
+          data: { type: "ERROR", payload: { message: "some error" } },
+        })
+      );
+    });
+    expect(result.current.lastError).toBe("some error");
+
+    // A successful STATE_UPDATE should clear the error
+    act(() => {
+      sendStateUpdate(INIT_STATE_UPDATE);
+    });
+    expect(result.current.lastError).toBeNull();
+  });
+
   it("updates renderState on STATE_UPDATE message", () => {
     const { result } = renderHook(() => useChessWorker());
 

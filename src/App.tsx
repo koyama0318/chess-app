@@ -8,6 +8,7 @@ import { FlipButton } from "./components/FlipButton";
 import { GameOverModal } from "./components/GameOverModal";
 import { ResetButton } from "./components/ResetButton";
 import { ShareButton } from "./components/ShareButton";
+import { GameStatus as GameStatusEnum } from "./types/chess";
 import { getFenTurn } from "./utils/fen";
 import { loadMoveEvents } from "./utils/storage";
 import type { GameMode, AppPhase } from "./types/game";
@@ -39,9 +40,17 @@ function ChessApp({
   gameMode: GameMode | null;
   initialFen?: string;
 }) {
-  const { initState, renderState, sendMove, sendUndo, sendRedo, resetGame } =
-    useChessWorker(initialFen);
+  const {
+    initState,
+    renderState,
+    lastError,
+    sendMove,
+    sendUndo,
+    sendRedo,
+    resetGame,
+  } = useChessWorker(initialFen);
   const [flipped, setFlipped] = useState(false);
+  const [dismissedError, setDismissedError] = useState<string | null>(null);
 
   switch (initState) {
     case "uninit":
@@ -73,6 +82,47 @@ function ChessApp({
             currentTurn={renderState.currentTurn}
             onRematch={resetGame}
           />
+          {lastError &&
+            lastError !== dismissedError &&
+            renderState.status === GameStatusEnum.InProgress && (
+              <div
+                role="alert"
+                aria-label="Game error"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "8px",
+                  padding: "8px 16px",
+                  maxWidth: "100%",
+                  boxSizing: "border-box",
+                  backgroundColor: "#fee",
+                  border: "1px solid #fcc",
+                  borderRadius: "4px",
+                  color: "#b91c1c",
+                  fontSize: "14px",
+                }}
+              >
+                <span>{lastError}</span>
+                <button
+                  type="button"
+                  aria-label="Dismiss error"
+                  onClick={() => setDismissedError(lastError)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#b91c1c",
+                    fontSize: "16px",
+                    padding: "0 4px",
+                    lineHeight: 1,
+                    outline: "revert",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
           <Board
             renderState={renderState}
             onMove={sendMove}

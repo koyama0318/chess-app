@@ -40,9 +40,9 @@ function reducer(state: State, action: Action): State {
       return { ...state, lastError: action.message };
     case "STATE_UPDATE":
       if (state.initState === "initializing") {
-        return { ...state, initState: "ready", renderState: action.payload };
+        return { ...state, initState: "ready", renderState: action.payload, lastError: null };
       }
-      return { ...state, renderState: action.payload };
+      return { ...state, renderState: action.payload, lastError: null };
     default:
       return state;
   }
