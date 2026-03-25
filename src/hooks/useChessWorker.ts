@@ -153,7 +153,6 @@ export function useChessWorker(initialFen?: string): UseChessWorkerReturn {
     workerRef.current?.postMessage({ type: "INIT" });
   }, []);
 
-
   return {
     initState: state.initState,
     renderState: state.renderState,
