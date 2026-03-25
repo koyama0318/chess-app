@@ -5,7 +5,6 @@ import type { RenderState } from "../../types/chess";
 import { GameStatus } from "../../types/chess";
 
 const STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-const AFTER_E2E4_FEN = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
 
 function makeRenderState(partial: Partial<RenderState> = {}): RenderState {
   return {
@@ -39,10 +38,10 @@ function makePointerEvent(
 }
 
 describe("useDragDrop", () => {
-  let onMove: ReturnType<typeof vi.fn>;
+  let onMove: ReturnType<typeof vi.fn<(uciMove: string) => void>>;
 
   beforeEach(() => {
-    onMove = vi.fn();
+    onMove = vi.fn<(uciMove: string) => void>();
   });
 
   it("starts with isDragging false", () => {
